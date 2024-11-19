@@ -1,0 +1,36 @@
+---
+title: "Cats in Context: Analyzing Similarity and Sentiment with Transformer Models"
+author: "marwolaeth"
+format:
+  html:
+    theme: United
+execute: 
+  warning: false
+---
+
+In the ever-evolving field of natural language processing (NLP), one intriguing question arises: can transformer language models distinguish between texts that are lexically similar yet semantically opposite? This blog post explores this question through a focused investigation of various encoder-only transformer architectures, including BERT, RoBERTa, ELECTRA, and DeBERTa. By examining sentences like "I like cats" and "I hate cats," which may share a high similarity score despite their opposing sentiments, we delve into the models' abilities to capture nuanced meanings in language.
+
+To enrich this exploration, I tested both general models, such as bert-base-uncased, and those specifically trained for natural language inference (NLI) tasks. My hypothesis posited that NLI models would outperform their general counterparts in distinguishing between subtly different senses. The experiment involved comparing similarity scores between sentences and concepts, as well as employing zero-shot classification tasks to evaluate how well these models could assess sentiments related to cats. The results confirmed my hypothesis: NLI models demonstrated a superior capability in differentiating meanings, while general models struggled significantly.
+
+Through this investigation, I aim to shed light on how various transformer models interpret context and sentiment, providing insights that are not only relevant to NLP enthusiasts but also to anyone curious about the intricacies of language understanding in AI. Ultimately, this work opens the door to scaling these methods for assessing different semantic markers across a variety of subjects, paving the way for future applications beyond just feline feelings.
+
+## Motivation
+
+![spaCy document similarity example that prompted the experiment](assets/spacy-cats.png)
+
+## Experimental setup
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+1 + 1
+```
+
+You can add options to executable code like this 
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
