@@ -109,7 +109,7 @@ token_meaning_divergence <- function(
     expectation_mask,
     plot = FALSE
 ) {
-  if (!(length(text_embeddings$tokens[[1]]) == nrow(expectation_mask))) {
+  if (!(length(token_embeddings$tokens[[1]]) == nrow(expectation_mask))) {
     stop('Expectation mask matrix dimensions must math the number of documents')
   }
   
