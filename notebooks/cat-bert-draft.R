@@ -2,6 +2,42 @@ library(text)
 library(data.table) # for %like% and %chin% operators
 library(pheatmap)
 
+# The Verbs ----
+## Polarity encoding ----
+(verbs_data <- c(
+  'love'         =  1,
+  'hate'         = -1,
+  'like'         =  1,
+  "don't like"   = -1,
+  'take care of' =  1,
+  'screw'        = -1,
+  'save'         =  1,
+  'dislike'      = -1,
+  'adore'        =  1
+))
+(verbs <- names(verbs_data))
+
+## Word norms ----
+(verbs_tbl <- tibble::as_tibble(as.list(verbs) |> setNames(verbs)))
+(texts <- paste(
+  'I', verbs, 'cats'
+))
+
+(verb_norms <- textEmbed(
+  verbs_tbl,
+  model = model,
+  layers = -1,
+  keep_token_embeddings = FALSE,
+  tokenizer_parallelism = TRUE
+))
+verb_norms$texts$love
+
+## Evaluation vectors ----
+(eval_matrix <- as.matrix(verbs_data) %*% t(verbs_data))
+isSymmetric(eval_matrix)
+
+# Functions ----
+## Visualisation ----
 text_sumularity_heatmap <- function(m, ...) {
   pheatmap::pheatmap(
     m,
@@ -13,6 +49,7 @@ text_sumularity_heatmap <- function(m, ...) {
   )
 }
 
+## Similarity with multiple concepts ----
 mapTextSimilarityNorm <- function(
     text_embeddings,
     norm_embeddings
@@ -25,28 +62,82 @@ mapTextSimilarityNorm <- function(
   )
 }
 
+## Evaluation ----
+### For standalone experiments ----
+expectation_match <- function(
+    similarity_matrix,
+    expectation_mask
+) {
+  if (
+    !(is.null(dim(similarity_matrix)) & is.null(dim(expectation_mask))) &
+    !all(dim(similarity_matrix) == dim(expectation_mask))
+  ) {
+    stop("Dimensions of similarity and expectation mask matrices must match")
+  }
+  
+  if (is.null(dim(similarity_matrix))) {
+    return(t(similarity_matrix) %*% expectation_mask)
+  } else {
+    return(sum(similarity_matrix * expectation_mask))
+  }
+}
+
+### Test different parts of the model output ----
+select_tokens <- function(
+    text_embeddings,
+    which_token = 1L
+) {
+
+  if (is.character(which_token)) {
+    matcher <- function(doc) doc[grep(which_token, doc$tokens), ]
+  } else if (is.numeric(which_token)) {
+    matcher <- function(doc) doc[which_token, ]
+  } else {
+    stop('Selection predicate type is not supported')
+  }
+  
+  target_token_embeddings <- dplyr::bind_rows(
+    lapply(
+      text_embeddings$tokens[[1]], matcher
+    )
+  )
+  return(target_token_embeddings)
+}
+
+token_meaning_divergence <- function(
+    token_embeddings,
+    expectation_mask,
+    plot = FALSE
+) {
+  if (!(length(text_embeddings$tokens[[1]]) == nrow(expectation_mask))) {
+    stop('Expectation mask matrix dimensions must math the number of documents')
+  }
+  
+  sim <- textSimilarityMatrix(token_embeddings)
+  
+  score <- sum(sim * expectation_mask)
+  
+  if (plot) text_sumularity_heatmap(sim)
+  
+  return(score)
+}
+token_concept_discrimination <- function(
+    token_embeddings,
+    concept_embeddings,
+    expectation_mask,
+    plot = FALSE
+) {
+  
+}
+
 # TBD
 text <- 'В 2024 году Роскомнадзор удалил более 670 тыс. ссылок на пиратский контент. Под защиту РКН попали более 17 тыс. объектов авторских и смежных прав'
 
 # Now
+
+
 # Model Explorer ----
 ## English ----
-(verbs <- c(
-  'love',
-  'hate',
-  'like',
-  "don't like",
-  'take care of',
-  'screw',
-  'save',
-  'dislike',
-  'adore'
-))
-
-(verbs_tbl <- tibble::as_tibble(as.list(verbs) |> setNames(verbs)))
-(texts <- paste(
-  'I', verbs, 'cats'
-))
 model <- 'bert-base-uncased' # Love and hate are very close to me tonight©
 model <- 'ynie/roberta-large-snli_mnli_fever_anli_R1_R2_R3-nli' # Way better
 model <- 'abbasgolestani/ag-nli-DeTS-sentence-similarity-v2' # A lesser shit
@@ -75,20 +166,19 @@ docs <- textEmbed(
 # docs$tokens
 # comment(docs$word_types)
 (m_docs <- textSimilarityMatrix(docs$texts$texts))
+text_sumularity_heatmap(eval_matrix)
 text_sumularity_heatmap(m_docs, labels_row = texts)
-(verb_norms <- textEmbed(
-  verbs_tbl,
-  model = model,
-  layers = -1,
-  keep_token_embeddings = FALSE,
-  tokenizer_parallelism = TRUE
-))
-verb_norms$texts$love
+sum(m_docs * eval_matrix)
+expectation_match(m_docs, eval_matrix)
+
 (love_similarity <- textSimilarityNorm(
   docs$texts$texts,
   verb_norms$texts$love
 ))
 text_sumularity_heatmap(love_similarity, labels_row = texts)
+(love_similarity * verbs_data) |> sum()
+t(love_similarity) %*% verbs_data
+expectation_match(love_similarity, verbs_data)
 
 doc_verb_similarity <- mapTextSimilarityNorm(docs$texts$texts, verb_norms)
 text_sumularity_heatmap(
@@ -97,13 +187,16 @@ text_sumularity_heatmap(
   labels_col = verbs,
   main = 'Similarity of sentence embeddings with verb lexeme embeddings'
 )
-
+expectation_match(doc_verb_similarity, eval_matrix)
 
 (cats <- purrr::map_dfr(
   docs$tokens$texts, \(x) x[which(x$tokens %like% '.?cats'), ])
 )
 (m_obj <- textSimilarityMatrix(cats))
 text_sumularity_heatmap(m_obj, labels_row = texts, labels_col = texts)
+token_meaning_divergence(docs, '.?cats', eval_matrix, plot = TRUE)
+expectation_match(m_obj, eval_matrix)
+sum(m_obj * eval_matrix)
 
 cat_verb_similarity <- mapTextSimilarityNorm(cats, verb_norms)
 text_sumularity_heatmap(
