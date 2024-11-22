@@ -8,33 +8,45 @@ execute:
   warning: false
 ---
 
-In the ever-evolving field of natural language processing (NLP), one intriguing question arises: can transformer language models distinguish between texts that are lexically similar yet semantically opposite? This blog post explores this question through a focused investigation of various encoder-only transformer architectures, including BERT, RoBERTa, ELECTRA, and DeBERTa. By examining sentences like "I like cats" and "I hate cats," which may share a high similarity score despite their opposing sentiments, we delve into the models' abilities to capture nuanced meanings in language.
+## Preface
 
-To enrich this exploration, I tested both general models, such as bert-base-uncased, and those specifically trained for natural language inference (NLI) tasks. My hypothesis posited that NLI models would outperform their general counterparts in distinguishing between subtly different senses. The experiment involved comparing similarity scores between sentences and concepts, as well as employing zero-shot classification tasks to evaluate how well these models could assess sentiments related to cats. The results confirmed my hypothesis: NLI models demonstrated a superior capability in differentiating meanings, while general models struggled significantly.
-
-Through this investigation, I aim to shed light on how various transformer models interpret context and sentiment, providing insights that are not only relevant to NLP enthusiasts but also to anyone curious about the intricacies of language understanding in AI. Ultimately, this work opens the door to scaling these methods for assessing different semantic markers across a variety of subjects, paving the way for future applications beyond just feline feelings.
-
-## Motivation
+In the field of natural language processing (NLP), understanding subtle differences in meaning is essential, especially when evaluating sentiments related to brands and their images. This blog post explores how transformer models can be used to analyze nuanced sentiments in language. I was inspired by a notable observation from the spaCy NLP course, which demonstrated that sentences like "I like cats" and "I hate cats" can yield a 95% similarity score. While these sentences appear similar from a linguistic or topical perspective, they convey opposite sentiments.
 
 ![spaCy document similarity example that prompted the experiment](assets/spacy-cats.png)
 
-## Experimental setup
+As a media analyst at a communications agency, my role involves assessing brand perception across various attributes, including sentiment and specific image markers. The dynamic environment in which I work requires effective and flexible tools to evaluate how brands are perceived—such as whether they are considered innovative, strong, or environmentally friendly. By utilizing transformer models, I aim to deepen our understanding of brand sentiment and image, ultimately providing insights that can inform strategic communications.
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+## Zero-Shot Classification: Advantages for Brand Perception Analysis
 
-```{r}
-1 + 1
-```
+Zero-shot classification presents several key advantages that align perfectly with our goals in assessing brand perception through media text analysis:
 
-You can add options to executable code like this 
+### 1. **Rapid Deployment**
+- **Immediate Insights**: In a fast-paced environment, we often need to start reporting quickly. Zero-shot classification allows us to leverage pre-trained models without the time-consuming process of collecting labeled data for fine-tuning.
 
-```{r}
-#| echo: false
-2 * 2
-```
+### 2. **Flexibility with Unknown Classes**
+- **Adapting to Varied Brand Markers**: Brand image markers can vary widely among different clients. Zero-shot approaches enable us to classify sentiments and attributes without needing prior knowledge of specific classes, making it easier to adapt to diverse brand perceptions.
 
-## In serach for a divergence
+### 3. **Cost-Effectiveness**
+- **Resource Efficiency**: Collecting and labeling data can be costly and impractical. Zero-shot classification reduces the need for extensive datasets, allowing us to focus resources on analysis and insights rather than data preparation.
 
-> cls_token (str, optional, defaults to "<s>") — The classifier token which is used when doing sequence classification (classification of the whole sequence instead of per-token classification). It is the first token of the sequence when built with special tokens.
+### 4. **Robust Semantic Understanding**
+- **Contextual Insights**: By leveraging the semantic understanding of transformer models, we can capture nuanced sentiments related to brand perceptions, even when the specific markers are not predefined.
 
-From `RobertaTokenizer` [section](https://huggingface.co/docs/transformers/en/model_doc/roberta) of the `transformers` library documentation.
+In summary, zero-shot classification not only enables quicker responses to client needs but also provides the flexibility to analyze diverse brand images effectively. This approach is invaluable in our role as media analysts, where understanding sentiment and context is crucial for delivering actionable insights.
+
+To enrich this exploration, I tested both general models, such as bert-base-uncased, and those specifically trained for natural language inference (NLI) tasks. My hypothesis posited that NLI models would outperform their general counterparts in distinguishing between subtly different senses. The experiment involved comparing similarity scores between sentences and concepts, as well as employing zero-shot classification tasks to evaluate how well these models could assess sentiments related to cats. The results confirmed my hypothesis: NLI models demonstrated a superior capability in differentiating meanings, while general models struggled significantly.
+
+## The Challenge of Similarity in Sentiment
+In this section, we delve into the intriguing challenge of semantic similarity. Using the example of "I like cats" versus "I hate cats," we will explore how traditional similarity metrics can mislead us when it comes to sentiment analysis. By examining the nuances of language, we can better understand how context impacts meaning and sentiment.
+
+## Methodology: Choosing the Right Encoder Model
+Selecting an effective encoder model is crucial for successful zero-shot classification. This section will outline the various transformer models considered for this analysis, discussing their strengths and weaknesses. We will explore how these models can be leveraged to capture the sentiment nuances that are vital for brand image assessments.
+
+## Data Preparation and Experiment Design
+Preparing the right data is essential for meaningful analysis. In this section, we will discuss the steps taken to prepare the data, including embedding concepts and constructing expectation matrices. I will outline the experimental design used to evaluate the performance of different transformer models in capturing sentiment differences.
+
+## Results and Discussion
+What did we learn from our experiments? This section will present the results of the analysis, focusing on how well different transformer models performed in distinguishing between similar yet sentimentally opposite statements. We will discuss the implications of these findings for media analysis and brand evaluation.
+
+## Conclusion
+In the final section, we will reflect on the insights gained from this exploration and consider the broader applications of transformer models in sentiment analysis. As the landscape of NLP continues to evolve, understanding the intricacies of language will remain a critical skill for media analysts and communicators alike.
