@@ -42,6 +42,8 @@ In this section, we delve into the intriguing challenge of semantic similarity. 
 ## Methodology: Choosing the Right Encoder Model
 Selecting an effective encoder model is crucial for successful zero-shot classification. This section will outline the various transformer models considered for this analysis, discussing their strengths and weaknesses. We will explore how these models can be leveraged to capture the sentiment nuances that are vital for brand image assessments.
 
+I follow a specific logic for naming functions in R: if the primary goal of a function is to create a modified copy of its argument, the function name should be a verb. Conversely, if the function's goal is to return a value, such as a statistic or a measure, then the name should be a noun phrase.
+
 ## Data Preparation and Experiment Design
 Preparing the right data is essential for meaningful analysis. In this section, we will discuss the steps taken to prepare the data, including embedding concepts and constructing expectation matrices. I will outline the experimental design used to evaluate the performance of different transformer models in capturing sentiment differences.
 
