@@ -33,4 +33,8 @@ You can add options to executable code like this
 2 * 2
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+## In serach for a divergence
+
+> cls_token (str, optional, defaults to "<s>") — The classifier token which is used when doing sequence classification (classification of the whole sequence instead of per-token classification). It is the first token of the sequence when built with special tokens.
+
+From `RobertaTokenizer` [section](https://huggingface.co/docs/transformers/en/model_doc/roberta) of the `transformers` library documentation.
