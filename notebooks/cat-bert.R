@@ -9,6 +9,15 @@ model <- 'bert-base-uncased' # Love and hate are very close to me tonight©
 # model <- 'ynie/electra-large-discriminator-snli_mnli_fever_anli_R1_R2_R3-nli' # Wow
 # model <- 'Capreolus/electra-base-msmarco' # Raw
 # model <- 'ChrisZeng/electra-large-discriminator-nli-efl-hateval' # Electra <3
+# model <- 'ynie/albert-xxlarge-v2-snli_mnli_fever_anli_R1_R2_R3-nli' # Awful
+model <- 'cross-encoder/nli-deberta-v3-base' # WOW
+model <- 'cross-encoder/nli-deberta-v3-large' # Good for Zero-shot, bad otherwise
+model <- 'cross-encoder/nli-deberta-v3-small' # So-so
+model <- 'cross-encoder/nli-deberta-v3-xsmall' # Not bad for Zero-shot
+model <- 'nvidia/NV-Embed-v2'
+model <- 'cross-encoder/qnli-electra-base' # Poor
+model <- 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1' # Awful
+model <- 'MendelAI/nv-embed-v2-ontada-twab-peft'
 
 # Functions ----
 ## Visualisation ----
@@ -81,7 +90,7 @@ select_tokens <- function(
 
 #### The extent to which hidden states are similar or dissimialar
 ##### according to the given expectations
-meaning_divergence <- function(
+semantic_divergence <- function(
     embeddings,
     expectation_mask,
     plot = FALSE
@@ -101,7 +110,7 @@ meaning_divergence <- function(
 
 #### The extent to which a concept leaves a trace in a hidden state
 ##### of a text or related tokens
-concept_admixture <- function(
+contextual_influence <- function(
     embeddings,
     concept_embeddings,
     expectation_mask,
@@ -148,7 +157,8 @@ concept_admixture <- function(
   model = model,
   layers = -1,
   keep_token_embeddings = FALSE,
-  tokenizer_parallelism = TRUE
+  tokenizer_parallelism = TRUE,
+  trust_remote_code = TRUE
 ))
 verb_norms$texts$love
 
@@ -180,7 +190,7 @@ docs <- textEmbed(
 ######## These 3 lines are equivalent ########
 sum(m_docs * eval_matrix)
 expectation_match(m_docs, eval_matrix)
-meaning_divergence(docs$texts$texts, eval_matrix)
+semantic_divergence(docs$texts$texts, eval_matrix, plot = TRUE)
 
 #### Concept Similarity ----
 ##### A single concept ----
@@ -189,35 +199,34 @@ meaning_divergence(docs$texts$texts, eval_matrix)
   verb_norms$texts$love
 )) |> setNames(verbs)
 expectation_match(love_similarity, verbs_data)
-
-concept_admixture(docs$texts$texts, verb_norms, eval_matrix)
+contextual_influence(docs$texts$texts, verb_norms, eval_matrix, plot = TRUE)
 
 ### Tokens: Cats ----
 (cats <- select_tokens(docs, '.?cats'))
 
 #### Divergence ----
-meaning_divergence(cats, eval_matrix)
+semantic_divergence(cats, eval_matrix, plot = TRUE)
 
 ##### Concept Similarity ----
-concept_admixture(cats, verb_norms, eval_matrix)
+contextual_influence(cats, verb_norms, eval_matrix, plot = TRUE)
 
 ### Tokens: Classifer Token ----
 (cls <- select_tokens(docs, 1L))
 
 #### Divergence ----
 # Classifier tokens gets the most of meaning
-meaning_divergence(cls, eval_matrix, plot = TRUE)
+semantic_divergence(cls, eval_matrix, plot = TRUE)
 
 #### Concept Similarity ----
-concept_admixture(cls, verb_norms, eval_matrix)
+contextual_influence(cls, verb_norms, eval_matrix, plot = TRUE)
 
 ### Tokens: I ----
 (i <- select_tokens(docs, '.?i$'))
 #### Divergence ----
-meaning_divergence(i, eval_matrix)
+semantic_divergence(i, eval_matrix, plot = TRUE)
 
 #### Concept Similarity ----
-concept_admixture(i, verb_norms, eval_matrix, plot = TRUE)
+contextual_influence(i, verb_norms, eval_matrix, plot = TRUE)
 
 # Repeat for the next model
 ## or better run a function to test them all!

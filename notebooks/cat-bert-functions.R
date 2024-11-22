@@ -76,7 +76,7 @@ select_tokens <- function(
 
 #### The extent to which hidden states are similar or dissimialar
 ##### according to the given expectations
-meaning_divergence <- function(
+semantic_divergence <- function(
     embeddings,
     expectation_mask,
     plot = FALSE
@@ -96,7 +96,7 @@ meaning_divergence <- function(
 
 #### The extent to which a concept leaves a trace in a hidden state
 ##### of a text or related tokens
-concept_admixture <- function(
+contextual_influence <- function(
     embeddings,
     concept_embeddings,
     expectation_mask,

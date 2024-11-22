@@ -77,7 +77,7 @@ text_sumularity_heatmap(m_docs, labels_row = texts)
 sum(m_docs * eval_matrix)
 expectation_match(m_docs, eval_matrix)
 
-meaning_divergence(docs$texts$texts, eval_matrix)
+semantic_divergence(docs$texts$texts, eval_matrix)
 
 ##### Concept Similarity ----
 (love_similarity <- textSimilarityNorm(
@@ -100,8 +100,8 @@ text_sumularity_heatmap(
   main = 'Similarity of sentence embeddings with verb lexeme embeddings'
 )
 expectation_match(doc_verb_similarity, eval_matrix)
-concept_admixture(docs$texts$texts, verb_norms, eval_matrix, plot = TRUE)
-concept_admixture(
+contextual_influence(docs$texts$texts, verb_norms, eval_matrix, plot = TRUE)
+contextual_influence(
   docs$texts$texts, verb_norms_test, eval_matrix[, 1:6], plot = TRUE
 )
 
@@ -116,7 +116,7 @@ concept_admixture(
 text_sumularity_heatmap(m_obj, labels_row = texts, labels_col = texts)
 expectation_match(m_obj, eval_matrix)
 sum(m_obj * eval_matrix)
-meaning_divergence(cats, eval_matrix)
+semantic_divergence(cats, eval_matrix)
 
 ##### Concept Similarity ----
 (cat_verb_similarity <- mapTextSimilarityNorm(cats, verb_norms))
@@ -127,7 +127,7 @@ text_sumularity_heatmap(
   main = 'Similarity of “cat” embeddings with verb lexeme embeddings from corresponding sentences'
 )
 sum(cat_verb_similarity * eval_matrix)
-concept_admixture(cats, verb_norms, eval_matrix, plot = TRUE)
+contextual_influence(cats, verb_norms, eval_matrix, plot = TRUE)
 # microbenchmark::microbenchmark(
 #   purrr = purrr::map(
 #     verb_norms$texts,
@@ -163,7 +163,7 @@ text_sumularity_heatmap(
 (m_cls <- textSimilarityMatrix(cls))
 text_sumularity_heatmap(m_cls, labels_row = texts, labels_col = texts)
 expectation_match(m_cls, eval_matrix)
-meaning_divergence(cls, eval_matrix, plot = TRUE)
+semantic_divergence(cls, eval_matrix, plot = TRUE)
 
 ##### Concept Similarity ----
 cls_verb_similarity <- mapTextSimilarityNorm(cls, verb_norms)
@@ -174,7 +174,7 @@ text_sumularity_heatmap(
   main = 'Similarity of classifier token embeddings with verb lexeme embeddings from corresponding sentences'
 )
 sum(cls_verb_similarity * eval_matrix)
-concept_admixture(cls, verb_norms, eval_matrix)
+contextual_influence(cls, verb_norms, eval_matrix)
 
 #### Tokens: I ----
 (i <- purrr::map_dfr(
@@ -184,7 +184,7 @@ concept_admixture(cls, verb_norms, eval_matrix)
 ##### Divergence ----
 (m_i <- textSimilarityMatrix(i))
 text_sumularity_heatmap(m_i, labels_row = texts, labels_col = texts)
-meaning_divergence(i, eval_matrix)
+semantic_divergence(i, eval_matrix)
 
 ##### Concept Similarity ----
 i_verb_similarity <- mapTextSimilarityNorm(i, verb_norms)
@@ -194,7 +194,7 @@ text_sumularity_heatmap(
   labels_col = verbs,
   main = 'Similarity of “I” token embeddings with verb lexeme embeddings from corresponding sentences'
 )
-concept_admixture(i, verb_norms, eval_matrix, plot = TRUE)
+contextual_influence(i, verb_norms, eval_matrix, plot = TRUE)
 
 ### Zero-shot ----
 textZeroShot(
