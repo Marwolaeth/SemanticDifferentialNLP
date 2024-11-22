@@ -74,7 +74,7 @@ select_tokens <- function(
   return(target_token_embeddings)
 }
 
-#### The extent to which hidden states are similar or dissimialar
+#### The extent to which hidden states are similar or dissimilar
 ##### according to the given expectations
 semantic_divergence <- function(
     embeddings,
