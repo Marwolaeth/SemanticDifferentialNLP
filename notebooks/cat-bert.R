@@ -20,6 +20,8 @@ model <- 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1' # Awful
 model <- 'MendelAI/nv-embed-v2-ontada-twab-peft'
 model <- 'facebook/bart-large-mnli'
 model <- 'isolation-forest/setfit-absa-polarity' # Pretty
+model <- 'sentence-transrormers/paraphrase-MiniLM-L6-v2'
+model <- 'sentence-transformers/roberta-large-nli-stsb-mean-tokens'
 
 # Functions ----
 ## Visualisation ----
