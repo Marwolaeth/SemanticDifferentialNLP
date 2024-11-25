@@ -14,6 +14,8 @@ In the field of natural language processing (NLP), understanding subtle differen
 
 ![spaCy document similarity example that prompted the experiment](assets/spacy-cats.png)
 
+see also: https://www.sbert.net/docs/sentence_transformer/training_overview.html
+
 As a media analyst at a communications agency, my role involves assessing brand perception across various attributes, including sentiment and specific image markers. The dynamic environment in which I work requires effective and flexible tools to evaluate how brands are perceived—such as whether they are considered innovative, strong, or environmentally friendly. By utilizing transformer models, I aim to deepen our understanding of brand sentiment and image, ultimately providing insights that can inform strategic communications.
 
 ## Zero-Shot Classification: Advantages for Brand Perception Analysis
