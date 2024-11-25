@@ -18,6 +18,8 @@ model <- 'nvidia/NV-Embed-v2'
 model <- 'cross-encoder/qnli-electra-base' # Poor
 model <- 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1' # Awful
 model <- 'MendelAI/nv-embed-v2-ontada-twab-peft'
+model <- 'facebook/bart-large-mnli'
+model <- 'isolation-forest/setfit-absa-polarity' # Pretty
 
 # Functions ----
 ## Visualisation ----
@@ -202,7 +204,7 @@ expectation_match(love_similarity, verbs_data)
 contextual_influence(docs$texts$texts, verb_norms, eval_matrix, plot = TRUE)
 
 ### Tokens: Cats ----
-(cats <- select_tokens(docs, '.?cats'))
+(cats <- select_tokens(docs, '.?cats?'))
 
 #### Divergence ----
 semantic_divergence(cats, eval_matrix, plot = TRUE)
