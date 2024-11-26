@@ -19,7 +19,7 @@ match_arch <- function(model_name) {
     re.match(model_name, 'ALBERT') ~ 'ALBERT',
     re.match(model_name, 'MiniLM') ~ 'MiniLM',
     re.match(model_name, 'ERNIE') ~ 'ERNIE',
-    re.match(model_name, 'SONAR') ~ 'SONAR',
+    re.match(model_name, 'XLNet') ~ 'XLNet',
     re.match(model_name, 'BERT') ~ 'BERT',
     re.match(model_name, 'BART') ~ 'BART',
     re.match(model_name, 'bge') ~ 'BAAI',
@@ -39,12 +39,20 @@ match_type <- function(model_name) {
 }
 match_type <- compiler::cmpfun(match_type, options = list(optimize = 3))
 
-model_download_and_test <- function(model_name, lang = c('en', 'ru')) {
+model_download_and_test <- function(
+    model_name,
+    lang = c('en', 'ru')
+) {
   test_lang <- match.arg(lang, c('en', 'ru'), several.ok = FALSE)
   
-  txt <- ifelse(lang == 'en', "It's OK", "Всё нормально")
+  txt <- ifelse(lang == 'en', "It's OK", "Всё нормально") |> enc2utf8()
   
-  textEmbed(txt, model = model_name, logging_level = 'info')
+  textEmbed(
+    tolower(txt),
+    model = model_name,
+    logging_level = 'info',
+    remove_non_ascii = FALSE
+  )
 }
 
 ## Models list ----
@@ -62,7 +70,7 @@ models <- list(
         'Capreolus/electra-base-msmarco',
         'ChrisZeng/electra-large-discriminator-nli-efl-hateval',
         'ddobokki/electra-small-nli-sts',
-        'manuu01/electra-nli_finetuned',
+        # 'manuu01/electra-nli_finetuned',
         'martn-nguyen/multi_nli-electra_small',
         'MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7',
         'cointegrated/rubert-tiny-bilingual-nli',
@@ -82,7 +90,6 @@ models <- list(
         'cross-encoder/nli-deberta-v3-small',
         'cross-encoder/nli-deberta-v3-xsmall',
         'facebook/bart-large-mnli',
-        'knowledgator/comprehend_it-multilingual-t5-base',
         'mjwong/mcontriever-msmarco-xnli'
       ),
       type = match_arch(model),
@@ -93,7 +100,7 @@ models <- list(
     base = tibble::tibble(
       model = c(
         'bert-base-uncased',
-        'distillbert-base-uncased',
+        'Akirami/distillbert-uncased-ag-news',
         'google/electra-small-discriminator',
         'google/electra-base-discriminator',
         'google/electra-large-discriminator',
@@ -102,10 +109,9 @@ models <- list(
         'FacebookAI/xlm-roberta-large',
         'BAAI/bge-base-en-v1.5',
         'BAAI/bge-small-en-v1.5',
-        'nvidia/NV-Embed-v2',
-        'MendelAI/nv-embed-v2-ontada-twab-peft',
+        # 'nvidia/NV-Embed-v2',
+        # 'MendelAI/nv-embed-v2-ontada-twab-peft',
         'xlnet/xlnet-base-cased',
-        'cointegrated/SONAR_200_text_encoder',
         'SamLowe/roberta-base-go_emotions',
         'cardiffnlp/twitter-roberta-base-sentiment-latest',
         'cross-encoder/ms-marco-electra-base',
@@ -173,9 +179,7 @@ models <- list(
         'Adammz/rubert-base-cased-1-third',
         'numblilbug/finetuning-rubert-sentiment-model',
         'VivekMalipatel23/mDeBERTa-v3-base-text-emotion-classification',
-        'cointegrated/SONAR_200_text_encoder',
         'cointegrated/rubert-tiny-sentiment-balanced',
-        'cointegrated/rut5-base-paraphraser',
         'fyaronskiy/ruRoberta-large-ru-go-emotions',
         'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
       ),
@@ -187,10 +191,24 @@ models <- list(
 )
 
 ## Load and Test ----
-res <- purrr::list_rbind(
+models_df <- purrr::list_rbind(
   purrr::map(models, purrr::list_rbind),
   names_to = 'lang'
-) |>
+)
+res <- models_df |>
   dplyr::select(model, lang) |>
   as.list() |>
   purrr::pmap(purrr::safely(model_download_and_test))
+
+res
+
+models_df <- models_df |>
+  dplyr::mutate(
+    lang = factor(lang),
+    type = factor(type),
+    task = factor(task),
+    ok = purrr::map_lgl(res, \(m) !length(m[['error']]))
+  )
+
+models_df
+summary(models_df)
