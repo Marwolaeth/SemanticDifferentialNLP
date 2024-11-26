@@ -13,6 +13,7 @@ model <- 'TFLai/Bert-Multilingual-NLI' # Awful
 model <- 'ynie/electra-large-discriminator-snli_mnli_fever_anli_R1_R2_R3-nli' # Wow
 model <- 'Capreolus/electra-base-msmarco' # Raw
 model <- 'ChrisZeng/electra-large-discriminator-nli-efl-hateval' # Electra <3
+model <- 'mjwong/mcontriever-msmarco-xnli'
 
 ### The Verbs ----
 #### Polarity encoding ----
@@ -109,7 +110,7 @@ contextual_influence(
 (cats <- purrr::map_dfr(
   docs$tokens$texts, \(x) x[which(x$tokens %like% '.?cats'), ])
 )
-(cats <- select_tokens(docs, '.?cats'))
+(cats <- select_tokens(docs, '.?cats?'))
 
 ##### Divergence ----
 (m_obj <- textSimilarityMatrix(cats))
