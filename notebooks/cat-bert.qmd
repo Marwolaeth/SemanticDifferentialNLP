@@ -10,13 +10,65 @@ execute:
 
 ## Preface
 
-In the field of natural language processing (NLP), understanding subtle differences in meaning is essential, especially when evaluating sentiments related to brands and their images. This blog post explores how transformer models can be used to analyze nuanced sentiments in language. I was inspired by a notable observation from the spaCy NLP course, which demonstrated that sentences like "I like cats" and "I hate cats" can yield a 95% similarity score. While these sentences appear similar from a linguistic or topical perspective, they convey opposite sentiments.
+Recent advances in natural language processing (NLP) have significantly impacted various fields, from spam detection to the creative endeavour of writing novels.  These developments have not only improved how machines understand and generate text but have also expanded our ability to analyse language in meaningful ways. As we explore the capabilities of language models, it becomes clear that their applications are diverse, particularly in content analysis, where understanding the subtleties of language is crucial.
+
+::: {.callout-note title="Disclaimer"}
+I would like to clarify that I am not a computer scientist or data scientist. I am a scholar and sociologist whose primary focus is to infer meaning from large corpora of news and social media data, as well as to quantify this meaning. My insights and analyses are rooted in sociological principles and methodologies, rather than technical expertise in machine learning or artificial intelligence.
+:::
+
+For traditional text analysis tasks, such as classification or segmentation, lightweight encoder-only transformers (BERT, ELECTRA, RoBERTa, and the like) are often preferred due to their efficiency and effectiveness. These models excel in processing large datasets, allowing researchers to conduct detailed content analysis—a systematic evaluation of communication content that uncovers patterns and themes. With the advent of transformer neural networks, can now perform tasks that previously required the nuanced understanding of human coders, enhancing the scalability of content analysis across various research contexts. This development makes it feasible to manage larger datasets that were once considered unmanageable.
+
+However impressive large language models (LLMs) may be at generating text that closely resembles authentic human writing, their ability to *understand* text—an essential requirement for effective content analysis—remains a topic of scrutiny. Understanding text involves more than just recognising patterns; it requires grasping context, nuances, and the underlying meanings that inform human communication. While LLMs show remarkable proficiency in generating coherent sentences, the question arises: can they truly comprehend the subtleties necessary for in-depth analysis? This distinction is crucial, particularly when evaluating the effectiveness of these models in practical applications.
+
+Various evaluation tasks highlight the capabilities of transformer models in areas such as natural language inference (NLI) and sentiment analysis. These tasks often utilise benchmark datasets that allow models to be trained or fine-tuned, enhancing their performance in specific contexts. However, such training assumes a relatively stable environment where models can be optimally adjusted.
+
+## Why not just fine-tune evrything?
+
+Now, imagine a scenario where fine-tuning and re-tuning models is almost a daily necessity. As a media analyst at a communications agency, my work involves assessing brand perception across various attributes, including sentiment and specific image markers. The fast-paced nature of this environment demands tools that are not only effective but also adaptable, allowing me to evaluate how brands are perceived—whether they are seen as innovative, strong, or environmentally friendly, for instance. In this context, I must rely on the models' ability to perform competent zero-shot classification.
+
+Zero-shot classification is a method that enables models to make predictions on unseen categories without explicit training on those specific labels. This approach relies heavily on the model's ability to generalise from its training data, drawing on its understanding of language and context to infer meaning. For example, if tasked with classifying a brand as "sustainable" without prior examples, a well-trained model should be able to assess the language used in the brand’s communications and make an informed judgement. This capability is particularly valuable in dynamic environments where new trends and sentiments emerge rapidly, allowing analysts to keep pace with changing perceptions without the need for constant retraining.
+
+::: {.callout-note}
+As a text analyst, I tend to believe that “vanilla” sentiment analysis tasks make sense in very specific circumstances. For instance, they work well with movie reviews or purchase feedback, where the object of sentiment is clearly presupposed. Additionally, sentiment analysis is particularly relevant when the authors' emotions themselves are of primary interest.
+
+However, in most cases, sentiment is better understood as a binary relation expressed as $S(text, object, subject)$, or even a triadic relation $S(text, object, subject)$. For example, consider a news article featuring different speakers who provide varying opinions on various aspects of a topic. In such contexts, sentiment cannot be reduced to a simple positive or negative evaluation; it involves multiple perspectives and layers of meaning.
+
+Furthermore, it is helpful to conceptualise sentiment as a special case of a semantic differential, such as the continuum from “good” to “bad.” A language model can infer this semantic differential through natural language inference by comparing the probabilities of two hypotheses: “{X} is good” versus “{X} is bad.” This approach allows for a more nuanced understanding of sentiment within a given text.
+:::
+
+## Do Transformers lack semantic comprehension?
+
+> “Love and hate are very close to me tonight” © Manzana
+
+Consider the following screenshot from the spaCy NLP course. We see that that sentences like "I like cats" and "I hate cats" can yield a 95% similarity score. While they may be useful in certain applications like topic modeling, in others, it makes zero sense. This example demonstrates how embedding similarity measures can fail to capture the nuanced meaning and sentiment expressed in the text.
 
 ![spaCy document similarity example that prompted the experiment](assets/spacy-cats.png)
 
-see also: https://www.sbert.net/docs/sentence_transformer/training_overview.html
+Basic spaCy models use static word embeddings similar to Word2Vec, which assign a fixed vector representation to each word based on its co-occurrence patterns in a large corpus.
 
-As a media analyst at a communications agency, my role involves assessing brand perception across various attributes, including sentiment and specific image markers. The dynamic environment in which I work requires effective and flexible tools to evaluate how brands are perceived—such as whether they are considered innovative, strong, or environmentally friendly. By utilizing transformer models, I aim to deepen our understanding of brand sentiment and image, ultimately providing insights that can inform strategic communications.
+To address this shortcoming, it would be valuable to explore the use of more advanced language models, such as transformer-based embeddings. These contextual representations can potentially better account for the subtle differences in meaning and sentiment between the two sentences. By comparing the results of static word embeddings versus transformer-based approaches, we could gain insights into how the choice of underlying language model impacts the perceived similarity between documents.
+
+Meanwhile, some studies (Myeongjun Jang, Frank Mtumbuka, and Thomas Lukasiewicz. 2022. Beyond Distributional Hypothesis: Let Language Models Learn Meaning-Text Correspondence. In Findings of the Association for Computational Linguistics: NAACL 2022, pages 2030–2042, Seattle, United States. Association for Computational Linguistics.) suggest that transformers, despite the contextual nature of their final embeddings (hidden state), also struggle with important nuances of meaning, namely:
+
+- Logical negation property: Transformer models often fail to properly capture the semantic reversal introduced by negation, leading to assigning the same labels to or high similarity scores between sentences with opposite meanings, such as “I like cats” and “I don't like cats”.
+- Synonyms and most notably antonyms: Similar to the earlier example, transformer models can struggle to distinguish between semantically opposite words like “like” and “hate”.
+
+The paper by Jang et al. argues that the reason for this miscomprehension is the distributional hypothesis, which, as in Word2Vec, underpins the training of the embedding layer for most transformer-based language models. The distributional hypothesis posits that words with similar distributions in text tend to have similar meanings. While this principle can capture many semantic relationships and greatly simplifies training enabling it to be unsupervised, it falls short in accounting for more complex logical and antonymous connections.
+
+Imagine: in almost every possible (short enough though) context where we can find “love”, we can instead encounter “hate”. For example:
+
+- “I love my family” could become “I hate my family”
+- “Love conquers all” could become “Hate conquers all”
+“Love is in the air” could become “Hate is in the air”
+
+This type of substitution, where semantically opposite words like "love" and "hate" can be swapped in similar contexts, highlights the limitations of models that rely solely on the distributional hypothesis. While these models may capture the general semantic similarity between words based on their co-occurrence patterns, they struggle to distinguish the nuanced differences in meaning and sentiment conveyed by antonyms.
+
+Jang et al. propose a new intermediate training task called “meaning-matching” to address these limitations. By explicitly training the language model to learn the correspondence between a word and its meaning (here, a dictionary definition), the authors demonstrate improvements in the model's ability to capture logical negation and distinguish between synonyms and antonyms.
+
+Similar principles underlie the idea of Sentence Transformers (Nils Reimers and Iryna Gurevych. 2019. Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP), pages 3982–3992, Hong Kong, China. Association for Computational Linguistics.) where transformers are explicitly trained to match sentences with their paraphrases and on Natural Language Inference tasks.
+
+
+
 
 ## Zero-Shot Classification: Advantages for Brand Perception Analysis
 
