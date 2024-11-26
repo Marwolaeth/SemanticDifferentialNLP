@@ -1,3 +1,5 @@
+library(text)
+
 ## Utils ----
 re.match <- function(s, pattern) {
   grepl(pattern, s, ignore.case = TRUE)
@@ -27,6 +29,7 @@ match_arch <- function(model_name) {
     .default = '[other]'
   )
 }
+match_arch <- compiler::cmpfun(match_arch, options = list(optimize = 3))
 
 match_type <- function(model_name) {
   re.match(
@@ -34,6 +37,7 @@ match_type <- function(model_name) {
     '(cross\\-encoder)|(SBERT)|(sentence)|(rubert\\-tiny)|(MiniLM)|(sts)'
   )
 }
+match_type <- compiler::cmpfun(match_type, options = list(optimize = 3))
 
 model_download_and_test <- function(model_name, lang = c('en', 'ru')) {
   test_lang <- match.arg(lang, c('en', 'ru'), several.ok = FALSE)
@@ -41,7 +45,7 @@ model_download_and_test <- function(model_name, lang = c('en', 'ru')) {
   txt <- ifelse(lang == 'en', "It's OK", "Всё нормально")
   
   textEmbed(txt, model = model_name, logging_level = 'info')
-} |> purrr::safely()
+}
 
 ## Models list ----
 models <- list(
@@ -184,9 +188,9 @@ models <- list(
 
 ## Load and Test ----
 res <- purrr::list_rbind(
-    purrr::map(models, purrr::list_rbind),
-    names_to = 'lang'
-  ) |>
+  purrr::map(models, purrr::list_rbind),
+  names_to = 'lang'
+) |>
   dplyr::select(model, lang) |>
   as.list() |>
   purrr::pmap(purrr::safely(model_download_and_test))
