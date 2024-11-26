@@ -20,11 +20,20 @@ model <- 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1' # Awful
 model <- 'MendelAI/nv-embed-v2-ontada-twab-peft'
 model <- 'facebook/bart-large-mnli'
 model <- 'isolation-forest/setfit-absa-polarity' # Pretty
-model <- 'sentence-transrormers/paraphrase-MiniLM-L6-v2'
-model <- 'sentence-transformers/roberta-large-nli-stsb-mean-tokens'
+# model <- 'sentence-transrormers/paraphrase-MiniLM-L6-v2'
+# model <- 'sentence-transformers/roberta-large-nli-stsb-mean-tokens'
 
 # Functions ----
 ## Visualisation ----
+colours_heatmap <- colorRampPalette(
+  rev(
+    RColorBrewer::brewer.pal(
+      n = 8,
+      name = "RdYlBu"
+    )
+  )
+)(200)
+
 text_sumularity_heatmap <- function(m, ...) {
   pheatmap::pheatmap(
     m,
@@ -97,7 +106,8 @@ select_tokens <- function(
 semantic_divergence <- function(
     embeddings,
     expectation_mask,
-    plot = FALSE
+    plot = FALSE,
+    ...
 ) {
   if (!(length(embeddings[[1]]) == nrow(expectation_mask))) {
     stop('Expectation mask matrix dimensions must math the number of documents')
@@ -107,7 +117,12 @@ semantic_divergence <- function(
   
   score <- sum(sim * expectation_mask)
   
-  if (plot) text_sumularity_heatmap(sim)
+  if (plot) text_sumularity_heatmap(
+    sim,
+    color = colours_heatmap,
+    breaks = seq(-1, 1, length.out = length(colours_heatmap) + 1),
+    ...
+  )
   
   return(score)
 }
@@ -118,7 +133,8 @@ contextual_influence <- function(
     embeddings,
     concept_embeddings,
     expectation_mask,
-    plot = FALSE
+    plot = FALSE,
+    ...
 ) {
   if (
     !(
@@ -133,7 +149,12 @@ contextual_influence <- function(
   
   score <- sum(sim * expectation_mask)
   
-  if (plot) text_sumularity_heatmap(sim)
+  if (plot) text_sumularity_heatmap(
+    sim,
+    color = colours_heatmap,
+    breaks = seq(-1, 1, length.out = length(colours_heatmap) + 1),
+    ...
+  )
   
   return(score)
 }
@@ -141,6 +162,7 @@ contextual_influence <- function(
 # The Data ----
 ## The Concepts ----
 ### Polarity encoding ----
+#### Attitudes ----
 (verbs_data <- c(
   'love'         =  1,
   'hate'         = -1,
@@ -165,6 +187,9 @@ contextual_influence <- function(
   trust_remote_code = TRUE
 ))
 verb_norms$texts$love
+
+#### Judgements ----
+(judgement_data <- c(good = 1, bad = -1))
 
 ### The Texts ----
 (texts <- paste(
@@ -219,10 +244,12 @@ contextual_influence(cats, verb_norms, eval_matrix, plot = TRUE)
 
 #### Divergence ----
 # Classifier tokens gets the most of meaning
-semantic_divergence(cls, eval_matrix, plot = TRUE)
+semantic_divergence(cls, eval_matrix, plot = TRUE, labels_col = verbs)
 
 #### Concept Similarity ----
-contextual_influence(cls, verb_norms, eval_matrix, plot = TRUE)
+contextual_influence(
+  cls, verb_norms, eval_matrix, plot = TRUE, labels_col = verbs
+)
 
 ### Tokens: I ----
 (i <- select_tokens(docs, '.?i$'))
