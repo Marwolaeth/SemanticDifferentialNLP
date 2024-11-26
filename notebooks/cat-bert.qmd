@@ -1,6 +1,7 @@
 ---
 title: "Cats in Context: Analyzing Similarity and Sentiment with Transformer Models"
 author: "marwolaeth"
+bibliography: references.bib
 format:
   html:
     theme: United
@@ -48,7 +49,7 @@ Basic spaCy models use static word embeddings similar to Word2Vec, which assign 
 
 To address this shortcoming, it would be valuable to explore the use of more advanced language models, such as transformer-based embeddings. These contextual representations can potentially better account for the subtle differences in meaning and sentiment between the two sentences. By comparing the results of static word embeddings versus transformer-based approaches, we could gain insights into how the choice of underlying language model impacts the perceived similarity between documents.
 
-Meanwhile, some studies (Myeongjun Jang, Frank Mtumbuka, and Thomas Lukasiewicz. 2022. Beyond Distributional Hypothesis: Let Language Models Learn Meaning-Text Correspondence. In Findings of the Association for Computational Linguistics: NAACL 2022, pages 2030–2042, Seattle, United States. Association for Computational Linguistics.) suggest that transformers, despite the contextual nature of their final embeddings (hidden state), also struggle with important nuances of meaning, namely:
+Meanwhile, some studies (@jang-etal-2022-beyond) suggest that transformers, despite the contextual nature of their final embeddings (hidden state), also struggle with important nuances of meaning, namely:
 
 - Logical negation property: Transformer models often fail to properly capture the semantic reversal introduced by negation, leading to assigning the same labels to or high similarity scores between sentences with opposite meanings, such as “I like cats” and “I don't like cats”.
 - Synonyms and most notably antonyms: Similar to the earlier example, transformer models can struggle to distinguish between semantically opposite words like “like” and “hate”.
@@ -59,13 +60,13 @@ Imagine: in almost every possible (short enough though) context where we can fin
 
 - “I love my family” could become “I hate my family”
 - “Love conquers all” could become “Hate conquers all”
-“Love is in the air” could become “Hate is in the air”
+- “Love is in the air” could become “Hate is in the air”
 
 This type of substitution, where semantically opposite words like "love" and "hate" can be swapped in similar contexts, highlights the limitations of models that rely solely on the distributional hypothesis. While these models may capture the general semantic similarity between words based on their co-occurrence patterns, they struggle to distinguish the nuanced differences in meaning and sentiment conveyed by antonyms.
 
 Jang et al. propose a new intermediate training task called “meaning-matching” to address these limitations. By explicitly training the language model to learn the correspondence between a word and its meaning (here, a dictionary definition), the authors demonstrate improvements in the model's ability to capture logical negation and distinguish between synonyms and antonyms.
 
-Similar principles underlie the idea of Sentence Transformers (Nils Reimers and Iryna Gurevych. 2019. Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP), pages 3982–3992, Hong Kong, China. Association for Computational Linguistics.) where transformers are explicitly trained to match sentences with their paraphrases and on Natural Language Inference tasks.
+Similar principles underlie the idea of Sentence Transformers (@reimers2019sentencebertsentenceembeddingsusing) where transformers are explicitly trained to match sentences with their paraphrases and on Natural Language Inference tasks.
 
 
 
@@ -106,3 +107,9 @@ What did we learn from our experiments? This section will present the results of
 
 ## Conclusion
 In the final section, we will reflect on the insights gained from this exploration and consider the broader applications of transformer models in sentiment analysis. As the landscape of NLP continues to evolve, understanding the intricacies of language will remain a critical skill for media analysts and communicators alike.
+
+## References
+
+::: {#refs}
+
+:::
