@@ -129,7 +129,8 @@ models <- list(
         'sentence-transformers/quora-distilbert-multilingual',
         'sentence-transformers/nli-roberta-base-v2',
         'sentence-transformers/nli-distilroberta-base-v2',
-        'sentence-transformers/msmarco-roberta-base-v3'
+        'sentence-transformers/msmarco-roberta-base-v3',
+        'isolation-forest/setfit-absa-polarity'
       ),
       type = match_arch(model),
       sentence_level = match_type(model),
