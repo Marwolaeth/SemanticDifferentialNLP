@@ -9,8 +9,8 @@ re.match <- compiler::cmpfun(re.match, options = list(optimize = 3))
 match_arch <- function(model_name) {
   
   dplyr::case_when(
-    re.match(model_name, 'DistillRoBERTa') ~ 'DistillRoBERTa',
-    re.match(model_name, 'DistillBERT') ~ 'DistillBERT',
+    re.match(model_name, 'Distill?RoBERTa') ~ 'DistillRoBERTa',
+    re.match(model_name, 'Distill?.*BERT') ~ 'DistillBERT',
     re.match(model_name, 'Contriever') ~ 'Contriever',
     re.match(model_name, 'CamemBERT') ~ 'CamemBERT',
     re.match(model_name, 'DeBERTa') ~ 'DeBERTa',
@@ -34,7 +34,7 @@ match_arch <- compiler::cmpfun(match_arch, options = list(optimize = 3))
 match_type <- function(model_name) {
   re.match(
     model_name,
-    '(cross\\-encoder)|(SBERT)|(sentence)|(rubert\\-tiny)|(MiniLM)|(sts)'
+    '(s\\-encoder)|(SBERT)|(senten)|(\\/rubert\\-(t|m)in(y|i))|(MiniLM)|(sts)|(setfit)'
   )
 }
 match_type <- compiler::cmpfun(match_type, options = list(optimize = 3))
@@ -90,7 +90,8 @@ models <- list(
         'cross-encoder/nli-deberta-v3-small',
         'cross-encoder/nli-deberta-v3-xsmall',
         'facebook/bart-large-mnli',
-        'mjwong/mcontriever-msmarco-xnli'
+        'mjwong/mcontriever-msmarco-xnli',
+        'DeepPavlov/xlm-roberta-large-en-ru-mnli'
       ),
       type = match_arch(model),
       sentence_level = match_type(model),
@@ -112,6 +113,10 @@ models <- list(
         # 'nvidia/NV-Embed-v2',
         # 'MendelAI/nv-embed-v2-ontada-twab-peft',
         'xlnet/xlnet-base-cased',
+        'DeepPavlov/bert-base-cased-conversational',
+        'DeepPavlov/roberta-large-winogrande',
+        'DeepPavlov/xlm-roberta-large-en-ru',
+        'DeepPavlov/bert-base-multilingual-cased-sentence',
         'SamLowe/roberta-base-go_emotions',
         'cardiffnlp/twitter-roberta-base-sentiment-latest',
         'cross-encoder/ms-marco-electra-base',
@@ -151,7 +156,8 @@ models <- list(
         'MoritzLaurer/ernie-m-base-mnli-xnli',
         'MoritzLaurer/ernie-m-large-mnli-xnli',
         'sileod/mdeberta-v3-base-tasksource-nli',
-        'mjwong/mcontriever-msmarco-xnli'
+        'mjwong/mcontriever-msmarco-xnli',
+        'DeepPavlov/xlm-roberta-large-en-ru-mnli'
       ),
       type = match_arch(model),
       sentence_level = match_type(model),
@@ -170,12 +176,24 @@ models <- list(
         'ai-forever/ruRoberta-large',
         'ai-forever/ru-en-RoSBERTa',
         'DeepPavlov/rubert-base-cased',
+        'DeepPavlov/rubert-base-cased-sentence',
+        'DeepPavlov/bert-base-multilingual-cased-sentence',
+        'DeepPavlov/rubert-base-cased-conversational',
+        'DeepPavlov/xlm-roberta-large-en-ru',
+        'DeepPavlov/distilrubert-small-cased-conversational',
+        'DeepPavlov/distilrubert-base-cased-conversational',
+        'DeepPavlov/distilrubert-tiny-cased-conversational-v1',
+        'DeepPavlov/distilrubert-tiny-cased-conversational-5k',
+        'vkimbris/wb-descriptions-bert',
         'cointegrated/rubert-tiny2',
         'sergeyzh/rubert-mini-sts',
+        'sergeyzh/rubert-tiny-sts',
         'sergeyzh/rubert-tiny-turbo',
         'Pastushoc/rubert-tiny2-finetuned-fintech',
         'isolation-forest/setfit-absa-polarity',
+        'isolation-forest/setfit-absa-aspect',
         'IvashinMaxim/128Bert',
+        'Adammz/rubert-tiny2-1-4',
         'kartashoffv/vashkontrol-sentiment-rubert',
         'Adammz/rubert-base-cased-1-third',
         'numblilbug/finetuning-rubert-sentiment-model',
