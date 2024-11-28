@@ -74,7 +74,8 @@ docs <- textEmbed(
   # layers = 11:12,
   aggregation_from_layers_to_tokens = 'concatenate',
   keep_token_embeddings = TRUE,
-  tokenizer_parallelism = TRUE
+  tokenizer_parallelism = TRUE,
+  remove_non_ascii = FALSE
 )
 
 # The Experiment ----
