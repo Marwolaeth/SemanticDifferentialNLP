@@ -9,9 +9,10 @@ re.match <- compiler::cmpfun(re.match, options = list(optimize = 3))
 match_arch <- function(model_name) {
   
   dplyr::case_when(
-    re.match(model_name, 'Distill?RoBERTa') ~ 'DistillRoBERTa',
-    re.match(model_name, 'Distill?.*BERT') ~ 'DistillBERT',
+    re.match(model_name, '((Distill?)|(fin))RoBERTa') ~ 'DistilRoBERTa',
+    re.match(model_name, 'Distill?.*BERT') ~ 'DistilBERT',
     re.match(model_name, 'Contriever') ~ 'Contriever',
+    re.match(model_name, 'conv.*bert') ~ 'ConvBERT',
     re.match(model_name, 'CamemBERT') ~ 'CamemBERT',
     re.match(model_name, 'DeBERTa') ~ 'DeBERTa',
     re.match(model_name, 'RoBERTa') ~ 'RoBERTa',
@@ -108,6 +109,9 @@ models <- list(
         'FacebookAI/roberta-base',
         'FacebookAI/xlm-roberta-base',
         'FacebookAI/xlm-roberta-large',
+        'YituTech/conv-bert-base',
+        'YituTech/conv-bert-medium-small',
+        'YituTech/conv-bert-small',
         'BAAI/bge-base-en-v1.5',
         'BAAI/bge-small-en-v1.5',
         # 'nvidia/NV-Embed-v2',
@@ -135,7 +139,10 @@ models <- list(
         'sentence-transformers/nli-roberta-base-v2',
         'sentence-transformers/nli-distilroberta-base-v2',
         'sentence-transformers/msmarco-roberta-base-v3',
-        'isolation-forest/setfit-absa-polarity'
+        'isolation-forest/setfit-absa-polarity',
+        'mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis',
+        'kekunh/fine_tuned_finroberta',
+        'rnribeiro/FT-mrm8488-distilroberta-finetuned-financial-news-sentiment-analysis'
       ),
       type = match_arch(model),
       sentence_level = match_type(model),
@@ -157,7 +164,8 @@ models <- list(
         'MoritzLaurer/ernie-m-large-mnli-xnli',
         'sileod/mdeberta-v3-base-tasksource-nli',
         'mjwong/mcontriever-msmarco-xnli',
-        'DeepPavlov/xlm-roberta-large-en-ru-mnli'
+        'DeepPavlov/xlm-roberta-large-en-ru-mnli',
+        'Marwolaeth/rubert-tiny-nli-terra-v0'
       ),
       type = match_arch(model),
       sentence_level = match_type(model),
@@ -180,8 +188,8 @@ models <- list(
         'DeepPavlov/bert-base-multilingual-cased-sentence',
         'DeepPavlov/rubert-base-cased-conversational',
         'DeepPavlov/xlm-roberta-large-en-ru',
-        'DeepPavlov/distilrubert-small-cased-conversational',
-        'DeepPavlov/distilrubert-base-cased-conversational',
+        # 'DeepPavlov/distilrubert-small-cased-conversational',
+        # 'DeepPavlov/distilrubert-base-cased-conversational',
         'DeepPavlov/distilrubert-tiny-cased-conversational-v1',
         'DeepPavlov/distilrubert-tiny-cased-conversational-5k',
         'vkimbris/wb-descriptions-bert',
@@ -199,7 +207,7 @@ models <- list(
         'numblilbug/finetuning-rubert-sentiment-model',
         'VivekMalipatel23/mDeBERTa-v3-base-text-emotion-classification',
         'cointegrated/rubert-tiny-sentiment-balanced',
-        'fyaronskiy/ruRoberta-large-ru-go-emotions',
+        # 'fyaronskiy/ruRoberta-large-ru-go-emotions',
         'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
       ),
       type = match_arch(model),
@@ -220,14 +228,15 @@ res <- models_df |>
   purrr::pmap(purrr::safely(model_download_and_test))
 
 res
+purrr::map(res, 'error')
 
 models_df <- models_df |>
   dplyr::mutate(
     lang = factor(lang),
     type = factor(type),
     task = factor(task),
-    ok = purrr::map_lgl(res, \(m) !length(m[['error']]))
-  )
+    ok = purrr::map_lgl(res, \(m) !length(m[['error']])))
 
 models_df
 summary(models_df)
+
