@@ -303,3 +303,21 @@ textZeroShot(
   tokenizer_parallelism = TRUE,
   logging_level = 'error'
 )
+
+textZeroShot(
+  texts,
+  model = model_ru,
+  candidate_labels = c('хорошо', 'плохо'),
+  hypothesis_template = 'Для нас {}, что это здание синее',
+  tokenizer_parallelism = TRUE,
+  logging_level = 'error'
+)
+
+textZeroShot(
+  'Для наших конкурентов не хорошо, что наша компания расширяется',
+  model = model_ru,
+  candidate_labels = c('хорошо', 'плохо'),
+  hypothesis_template = 'Для нас {}, что наша компания расширяется',
+  tokenizer_parallelism = TRUE,
+  logging_level = 'error'
+)
