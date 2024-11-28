@@ -14,6 +14,8 @@ model <- 'ynie/electra-large-discriminator-snli_mnli_fever_anli_R1_R2_R3-nli' # 
 model <- 'Capreolus/electra-base-msmarco' # Raw
 model <- 'ChrisZeng/electra-large-discriminator-nli-efl-hateval' # Electra <3
 model <- 'mjwong/mcontriever-msmarco-xnli'
+model <- 'DeepPavlov/distilrubert-small-cased-conversational'
+model <- 'fyaronskiy/ruRoberta-large-ru-go-emotions'
 
 ### The Verbs ----
 #### Polarity encoding ----
@@ -61,7 +63,8 @@ docs <- textEmbed(
   # layers = 11:12,
   aggregation_from_layers_to_tokens = 'concatenate',
   keep_token_embeddings = TRUE,
-  tokenizer_parallelism = TRUE
+  tokenizer_parallelism = TRUE,
+  remove_non_ascii = FALSE
 )
 # str(docs, 1)
 # docs$word_types
@@ -265,19 +268,38 @@ model_translate <- 'Helsinki-NLP/opus-mt-en-ru'
 ) |> dplyr::pull())
 
 model_ru <- 'cointegrated/rubert-base-cased-nli-threeway'
+model_ru <- 'Marwolaeth/rubert-tiny-nli-terra-v0'
 docs <- textEmbed(
-  tolower(texts_ru),
+  enc2utf8(texts_ru),
   model = model_ru,
-  layers = -1
+  layers = -1,
+  remove_non_ascii = FALSE
 )
 
 (sentiment_labels <- c('хорошие', 'плохие'))
 (sentiment_labels <- c('хорошие', 'плохие', 'норм'))
 textZeroShot(
-  tolower(texts_ru),
+  texts_ru,
   model = model_ru,
   candidate_labels = sentiment_labels,
   hypothesis_template = 'кошки {}',
+  tokenizer_parallelism = TRUE,
+  logging_level = 'error'
+)
+
+### Коварный вопрос ---
+texts <- c(
+  'Для наших врагов хорошо, что это здание синее',
+  'Для наших врагов плохо, что это здание синее',
+  'Наши враги в восторге, что это здание синее',
+  'Для наших врагов не хорошо, что это здание синее',
+  'Нам повезло, что это здание синее'
+)
+textZeroShot(
+  texts,
+  model = model_ru,
+  candidate_labels = c('Хорошо', 'Плохо'),
+  hypothesis_template = '{}, что это здание синее',
   tokenizer_parallelism = TRUE,
   logging_level = 'error'
 )
