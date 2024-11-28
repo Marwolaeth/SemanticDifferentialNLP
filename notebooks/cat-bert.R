@@ -70,7 +70,7 @@ docs <- textEmbed(
   texts,
   # tolower(texts),
   model = model,
-  layers = -1,
+  layers = -2:-1,
   # layers = 11:12,
   aggregation_from_layers_to_tokens = 'concatenate',
   keep_token_embeddings = TRUE,
@@ -79,6 +79,10 @@ docs <- textEmbed(
 )
 
 # The Experiment ----
+test_embeddings(
+  model, texts, eval_matrix, verbs, eval_matrix
+)
+
 ## Embedding Comparison ----
 ### Document Embeddings ----
 #### Divergence ----
