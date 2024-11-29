@@ -70,7 +70,7 @@ docs <- textEmbed(
   texts,
   # tolower(texts),
   model = model,
-  layers = -2:-1,
+  layers = -1,
   # layers = 11:12,
   aggregation_from_layers_to_tokens = 'concatenate',
   keep_token_embeddings = TRUE,
@@ -79,56 +79,25 @@ docs <- textEmbed(
 )
 
 # The Experiment ----
-test_embeddings(
-  model, texts, eval_matrix, verbs, eval_matrix
+## Embeddings ----
+model_data <- expand.grid(
+  model = list(
+    'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1',
+    'facebook/bart-large-mnli',
+    'isolation-forest/setfit-absa-polarity'
+  ),
+  layers = list(-1, -2:-1)
 )
 
-## Embedding Comparison ----
-### Document Embeddings ----
-#### Divergence ----
-(m_docs <- textSimilarityMatrix(docs$texts$texts))
-######## These 3 lines are equivalent ########
-sum(m_docs * eval_matrix)
-expectation_match(m_docs, eval_matrix)
-semantic_divergence(docs$texts$texts, eval_matrix, plot = TRUE)
-
-#### Concept Similarity ----
-##### A single concept ----
-(love_similarity <- textSimilarityNorm(
-  docs$texts$texts,
-  verb_norms$texts$love
-)) |> setNames(verbs)
-expectation_match(love_similarity, verbs_data)
-contextual_influence(docs$texts$texts, verb_norms, eval_matrix, plot = TRUE)
-
-### Tokens: Cats ----
-(cats <- select_tokens(docs, '.?cats?'))
-
-#### Divergence ----
-semantic_divergence(cats, eval_matrix, plot = TRUE)
-
-##### Concept Similarity ----
-contextual_influence(cats, verb_norms, eval_matrix, plot = TRUE)
-
-### Tokens: Classifer Token ----
-(cls <- select_tokens(docs, 1L))
-
-#### Divergence ----
-# Classifier tokens gets the most of meaning
-semantic_divergence(cls, eval_matrix, plot = TRUE, labels_col = verbs)
-
-#### Concept Similarity ----
-contextual_influence(
-  cls, verb_norms, eval_matrix, plot = TRUE, labels_col = verbs
+test <- purrr:::pmap_dfr(
+  model_data,
+  test_embeddings,
+  corpus = texts,
+  expectation_mask_texts = eval_matrix,
+  concepts = verbs,
+  expectation_mask_concepts = eval_matrix,
+  tokens = list(1L, '.?cat.?', '.?I')
 )
+test
 
-### Tokens: I ----
-(i <- select_tokens(docs, '.?i$'))
-#### Divergence ----
-semantic_divergence(i, eval_matrix, plot = TRUE)
-
-#### Concept Similarity ----
-contextual_influence(i, verb_norms, eval_matrix, plot = TRUE)
-
-# Repeat for the next model
-## or better run a function to test them all!
+## Zero-shot ----

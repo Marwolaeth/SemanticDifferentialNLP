@@ -219,10 +219,23 @@ contextual_influence <- function(
 }
 
 # Tests Functions ----
-corpus <- texts
-concepts <- verbs
-expectation_mask_texts <- expectation_mask_concepts <- eval_matrix
-layers <- -2:-1
+
+## Test embeddings capturing meaning ----
+semantic_divergence_safe <- purrr::safely(
+  function(embeddings, expectation_mask) {
+    sim <- textSimilarityMatrix(embeddings)
+    sum(sim * expectation_mask)
+  },
+  otherwise = NaN
+)
+
+contextual_influence_safe <- purrr::safely(
+  function(embeddings, concept_embeddings, expectation_mask) {
+    sim <- mapTextSimilarityNorm(embeddings, concept_embeddings)
+    sum(sim * expectation_mask)
+  },
+  otherwise = NaN
+)
 
 test_embeddings <- function(
     model,
@@ -259,22 +272,39 @@ test_embeddings <- function(
     }
   }
   
-  #### Create embeddings ----
-  ##### Concept word-norms ----
-  concepts_df <- tibble::as_tibble(as.list(concepts) |> setNames(concepts))
-  norms <- textEmbed(
-    concepts_df,
-    model = model,
-    layers = layers,
-    keep_token_embeddings = FALSE,
-    aggregation_from_layers_to_tokens = 'concatenate',
-    aggregation_from_tokens_to_texts = 'mean',
-    trust_remote_code = TRUE,
-    remove_non_ascii = FALSE,
-    tokenizer_parallelism = TRUE
+  #### Benchmark (maximum possible) values ----
+  benchmarks <- c(
+    divergence = sum(expectation_mask_texts^2), # Element-wise power
+    influence = if (is.null(expectation_mask_concepts)) {
+      NaN
+    } else {
+      sum(expectation_mask_concepts^2)
+    }
   )
   
-  ##### The Documents ----
+  #### Create embeddings ----
+  ##### Word Norms ----
+  if (!is.null(concepts)) {
+    concepts_df <- tibble::as_tibble(as.list(concepts) |> setNames(concepts))
+    norms <- textEmbed(
+      concepts_df,
+      model = model,
+      layers = layers,
+      keep_token_embeddings = FALSE,
+      aggregation_from_layers_to_tokens = 'concatenate',
+      aggregation_from_tokens_to_texts = 'mean',
+      trust_remote_code = TRUE,
+      remove_non_ascii = FALSE,
+      tokenizer_parallelism = TRUE,
+      ...
+    )
+    duration_norms <- extract_duration(norms)
+  } else {
+    norms <- NULL
+    duration_norms <- NaN
+  }
+  
+  ##### Documents ----
   docs <- textEmbed(
     corpus,
     model = model,
@@ -285,24 +315,91 @@ test_embeddings <- function(
     decontextualize = FALSE,
     trust_remote_code = TRUE,
     remove_non_ascii = FALSE,
-    tokenizer_parallelism = TRUE
+    tokenizer_parallelism = TRUE,
+    ...
   )
+  duration_docs <- extract_duration(docs)
   
   #### The Tests ----
+  test_types <- c('divergence', 'influence')
   
-  doc_divergence <- tryCatch(
-    semantic_divergence(
-      docs$texts$texts,
-      expectation_mask_texts,
-      plot = FALSE
+  ##### Documents ----
+  result <- tibble::tibble(
+    test_type = test_types,
+    test_level = 'document',
+    token = NA_character_,
+    value = c(
+      semantic_divergence_safe(
+        docs$texts$texts,
+        expectation_mask_texts
+      )[['result']],
+      contextual_influence_safe(
+        docs$texts$texts,
+        norms,
+        expectation_mask_concepts
+      )[['result']]
     ),
-    error = function(e) NaN
+    rating = value / benchmarks
   )
   
+  ##### Tokens ----
+  if (length(tokens)) {
+    result <- result |> dplyr::bind_rows(
+      purrr::map_dfr(
+        tokens,
+        function(token) {
+          token_embeddings <- select_tokens(docs, token)
+          
+          tibble::tibble(
+            test_type = test_types,
+            test_level = 'token',
+            token = ifelse(token == 1L, '[CLS]', token),
+            value = c(
+              semantic_divergence_safe(
+                token_embeddings,
+                expectation_mask_texts
+              )[['result']],
+              contextual_influence_safe(
+                token_embeddings,
+                norms,
+                expectation_mask_concepts
+              )[['result']]
+            ),
+            rating = value / benchmarks
+          )
+        }
+      ) 
+    )
+  }
+  
+  ##### Total ----
+  model_scores <- result |>
+    dplyr::summarise(
+      dplyr::across(
+        value,
+        c(mean = mean, max = max, sum = sum),
+        .names = '{.fn}'
+      ),
+      .by = test_type
+    ) |>
+    tidyr::pivot_wider(
+      names_from = test_type,
+      values_from = c(mean, max, sum)
+    )
+
+  #### Final Value ----
   tibble::tibble(
     model = model,
-    duration_corpus = extract_duration(docs),
-    duration_concepts = extract_duration(norms),
-    result = doc_divergence
-  )
+    layers = aste(as.character(layers), collapse = ':'),
+    duration_corpus = duration_docs,
+    duration_concepts = duration_norms,
+    results = list(
+      dplyr::mutate(result, dplyr::across(dplyr::starts_with('test_'), factor))
+    )
+  ) |>
+    dplyr::bind_cols(model_scores)
 }
+test_embeddings <- compiler::cmpfun(test_embeddings, options = list(optimize=3))
+
+## Test zero-shot classification quality ----
+test_zero_shot <- function(...) {...}
