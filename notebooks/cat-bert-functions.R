@@ -390,7 +390,7 @@ test_embeddings <- function(
   #### Final Value ----
   tibble::tibble(
     model = model,
-    layers = aste(as.character(layers), collapse = ':'),
+    layers = paste(as.character(layers), collapse = ':'),
     duration_corpus = duration_docs,
     duration_concepts = duration_norms,
     results = list(
