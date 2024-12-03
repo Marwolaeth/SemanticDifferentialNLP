@@ -16,8 +16,8 @@ extract_duration <- function(text_embeddings) {
 
 #' Concatenate tokens from transformer embeddings into words
 #'
-#' @param embeddings A data frame containing token embeddings with at least a 'tokens' column and embedding columns named according to dimension names from the `text` package
-#' @param aggregation A function or character string specifying the aggregation method 
+#' @param embeddings A data frame containing token embeddings with at least a 'tokens' column and embedding columns named according to dimension names from the `text` package.
+#' @param aggregation A function or character string specifying the aggregation method .
 #                ('mean', 'min', 'max', 'sum'). Default is mean.
 #'
 #' @return A data frame with concatenated tokens and aggregated embeddings.
@@ -93,6 +93,20 @@ colours_heatmap <- colorRampPalette(
   )
 )(200)
 
+#' Create a heatmap for visualizing similarity matrices
+#'
+#' @param m A numeric matrix, usually a result of `textSimilarityMatrix()` call.
+#' @param ... 	Additional arguments passed on to `pheatmap::pheatmap()`.
+#'
+#' @return Invisibly a `pheatmap` object.
+#' @export
+#'
+#' @examples 
+#' library(text)
+#' sentences <- c('I adore dogs', 'I like cats')
+#' embeddings <- textEmbed(sentences)
+#' similarity <- textSimilarityMatrix(embeddings$texts$texts)
+#' text_sumularity_heatmap(similarity, labels_row = sentences)
 text_sumularity_heatmap <- function(m, ...) {
   pheatmap::pheatmap(
     m,
@@ -105,6 +119,7 @@ text_sumularity_heatmap <- function(m, ...) {
 }
 
 ## Similarity with multiple concepts ----
+## Computes normalized similarities between text embeddings and concept embeddings.
 mapTextSimilarityNorm <- function(
     text_embeddings,
     norm_embeddings
@@ -121,19 +136,19 @@ mapTextSimilarityNorm <- function(
 ### For standalone experiments ----
 expectation_match <- function(
     similarity_matrix,
-    expectation_mask
+    contrast_matrix
 ) {
   if (
-    !(is.null(dim(similarity_matrix)) & is.null(dim(expectation_mask))) &
-    !all(dim(similarity_matrix) == dim(expectation_mask))
+    !(is.null(dim(similarity_matrix)) & is.null(dim(contrast_matrix))) &
+    !all(dim(similarity_matrix) == dim(contrast_matrix))
   ) {
     stop("Dimensions of similarity and expectation mask matrices must match")
   }
   
   if (is.null(dim(similarity_matrix))) {
-    return(t(similarity_matrix) %*% expectation_mask)
+    return(t(similarity_matrix) %*% contrast_matrix)
   } else {
-    return(sum(similarity_matrix * expectation_mask))
+    return(sum(similarity_matrix * contrast_matrix))
   }
 }
 
@@ -164,17 +179,17 @@ select_tokens <- function(
 ##### according to the given expectations
 semantic_divergence <- function(
     embeddings,
-    expectation_mask,
+    contrast_matrix,
     plot = FALSE,
     ...
 ) {
-  if (!(length(embeddings[[1]]) == nrow(expectation_mask))) {
+  if (!(length(embeddings[[1]]) == nrow(contrast_matrix))) {
     stop('Expectation mask matrix dimensions must math the number of documents')
   }
   
   sim <- textSimilarityMatrix(embeddings)
   
-  score <- sum(sim * expectation_mask)
+  score <- sum(sim * contrast_matrix)
   
   if (plot) text_sumularity_heatmap(
     sim,
@@ -191,14 +206,14 @@ semantic_divergence <- function(
 contextual_influence <- function(
     embeddings,
     concept_embeddings,
-    expectation_mask,
+    contrast_matrix,
     plot = FALSE,
     ...
 ) {
   if (
     !(
-      length(embeddings[[1]]) == nrow(expectation_mask) &
-      length(concept_embeddings[[1]]) == ncol(expectation_mask)
+      length(embeddings[[1]]) == nrow(contrast_matrix) &
+      length(concept_embeddings[[1]]) == ncol(contrast_matrix)
     )
   ) {
     stop('Expectation mask matrix must be of shape (n_texts × n_concepts)')
@@ -206,7 +221,7 @@ contextual_influence <- function(
   
   sim <- mapTextSimilarityNorm(embeddings, concept_embeddings)
   
-  score <- sum(sim * expectation_mask)
+  score <- sum(sim * contrast_matrix)
   
   if (plot) text_sumularity_heatmap(
     sim,
@@ -221,64 +236,166 @@ contextual_influence <- function(
 # Tests Functions ----
 
 ## Test embeddings capturing meaning ----
-semantic_divergence_safe <- purrr::safely(
-  function(embeddings, expectation_mask) {
+.semantic_divergence_safe <- purrr::safely(
+  function(embeddings, contrast_matrix) {
     sim <- textSimilarityMatrix(embeddings)
-    sum(sim * expectation_mask)
+    sum(sim * contrast_matrix)
   },
   otherwise = NaN
 )
 
-contextual_influence_safe <- purrr::safely(
-  function(embeddings, concept_embeddings, expectation_mask) {
+.contextual_influence_safe <- purrr::safely(
+  function(embeddings, concept_embeddings, contrast_matrix) {
     sim <- mapTextSimilarityNorm(embeddings, concept_embeddings)
-    sum(sim * expectation_mask)
+    sum(sim * contrast_matrix)
   },
   otherwise = NaN
 )
+
+.check_inner_contrast <- function(m, n) {
+  if (!all(nrow(m) ==  n, ncol(m) == n)) {
+    stop('Both inner contrast matrix dimensions must math the number of documents')
+  }
+}
+
+.check_outer_contrast <- function(m, n_docs, n_norms) {
+  if (
+    !(n_docs == nrow(m) & n_norms == ncol(m))
+  ) {
+    stop(
+      'Expectation outer similarity matrices must be of shape (n_texts × n_concepts)'
+    )
+  }
+}
+
+.evaluate_embedding <- function(
+    test_type,
+    test_level,
+    token,
+    text_embeddings,
+    norm_embeddings,
+    contrast_matrices,
+    benchmark_values
+) {
+  test_type <- match.arg(test_type, c('inner', 'outer'), several.ok = FALSE)
+  if (test_type == 'inner') {
+    test <- function(e, norms, m) {
+      .semantic_divergence_safe(e, m)[['result']]
+    }
+  } else {
+    test <- function(e, norms, m) {
+      .contextual_influence_safe(e, norms, m)[['result']]
+    }
+  }
+  
+  contrasts <- contrast_matrices[[test_type]]
+  benchmark <- benchmark_values[[test_type]]
+  
+  if (test_level == 'token') {
+    if (grepl('^\\d+$', token)) token <- as.integer(token)
+    embeddings <- select_tokens(text_embeddings, token)
+  } else {
+    embeddings <- text_embeddings$texts$texts
+  }
+  
+  purrr::map2(
+    contrasts,
+    benchmark,
+    \(m, b) {
+      tibble::tibble(
+        value = test(embeddings, norm_embeddings, m),
+        rating = value / b
+      )
+    }
+  ) |>
+    dplyr::bind_rows(.id = 'contrast')
+}
 
 test_embeddings <- function(
     model,
     corpus,
-    expectation_mask_texts,
+    expected_inner_similarities,
     concepts = NULL,
-    expectation_mask_concepts = NULL,
+    expected_outer_similarities = NULL,
     tokens = NULL,
     layers = -1,
+    bind_aggregate_scores = FALSE,
     ...
 ) {
   #### Check argument validity ----
-  if (!(length(corpus) == nrow(expectation_mask_texts))) {
-    stop('Expectation mask matrix dimensions must math the number of documents')
+  if (is.list(expected_inner_similarities)) {
+    purrr::walk(
+      expected_inner_similarities,
+      .check_inner_contrast,
+      length(corpus)
+    )
+    
+    # Contrast names to be used in the output
+    if (is.null(names(expected_inner_similarities))) {
+      names(expected_inner_similarities) <- paste0(
+        'contrast', seq_along(expected_inner_similarities)
+      )
+      warning(
+        'No names for expected inner similarity matrices provided. Using auto names'
+      )
+    }
+  } else {
+    .check_inner_contrast(expected_inner_similarities, length(corpus))
+    
+    # So that we don't have to check whether it is a list
+    expected_inner_similarities <- list(
+      inner_contrast = expected_inner_similarities
+    )
   }
   
   if (!is.null(concepts)) {
-    if (is.null(expectation_mask_concepts)) {
+    if (is.null(expected_outer_similarities)) {
       warning(
-        'Expectation mask for concept match is not provided. Skipping concept match test'
+        'Contrast matrices for outer similarities are not provided. Skipping outer match tests'
       )
       concepts <- NULL
     } else {
-      if (
-        !(
-          length(corpus) == nrow(expectation_mask_concepts) &
-          length(concepts) == ncol(expectation_mask_concepts)
+      if (is.list(expected_outer_similarities)) {
+        purrr::walk(
+          expected_outer_similarities,
+          .check_outer_contrast,
+          length(corpus), length(concepts)
         )
-      ) {
-        stop(
-          'Expectation mask matrix must be of shape (n_texts × n_concepts)'
+        
+        if (is.null(names(expected_outer_similarities))) {
+          names(expected_outer_similarities) <- paste0(
+            'contrast', seq_along(expected_outer_similarities)
+          )
+          warning(
+            'No names for expected outer similarity matrices provided. Using auto names'
+          )
+        }
+      } else {
+        .check_outer_contrast(
+          expected_outer_similarities, length(corpus), length(concepts)
+        )
+        
+        # So that we don't have to check whether it is a list
+        expected_outer_similarities <- list(
+          outer_contrast = expected_outer_similarities
         )
       }
     }
   }
   
   #### Benchmark (maximum possible) values ----
-  benchmarks <- c(
-    divergence = sum(expectation_mask_texts^2), # Element-wise power
-    influence = if (is.null(expectation_mask_concepts)) {
-      NaN
+  benchmarks <- list(
+    inner = purrr::map(
+      expected_inner_similarities,
+      \(x) sum(x^2) # Element-wise power
+    ),
+    outer = if (is.null(expected_outer_similarities)) {
+      list(contrasts = NaN)
     } else {
-      sum(expectation_mask_concepts^2)
+      purrr::map(
+        expected_outer_similarities,
+        \(x) sum(x^2)
+      )
     }
   )
   
@@ -321,71 +438,57 @@ test_embeddings <- function(
   duration_docs <- extract_duration(docs)
   
   #### The Tests ----
-  test_types <- c('divergence', 'influence')
-  
-  ##### Documents ----
-  result <- tibble::tibble(
-    test_type = test_types,
-    test_level = 'document',
-    token = NA_character_,
-    value = c(
-      semantic_divergence_safe(
-        docs$texts$texts,
-        expectation_mask_texts
-      )[['result']],
-      contextual_influence_safe(
-        docs$texts$texts,
-        norms,
-        expectation_mask_concepts
-      )[['result']]
-    ),
-    rating = value / benchmarks
+  contrast_matrices <- list(
+    inner = expected_inner_similarities,
+    outer = expected_outer_similarities
   )
-  
-  ##### Tokens ----
-  if (length(tokens)) {
-    result <- result |> dplyr::bind_rows(
-      purrr::map_dfr(
-        tokens,
-        function(token) {
-          token_embeddings <- select_tokens(docs, token)
-          
-          tibble::tibble(
-            test_type = test_types,
-            test_level = 'token',
-            token = ifelse(token == 1L, '[CLS]', token),
-            value = c(
-              semantic_divergence_safe(
-                token_embeddings,
-                expectation_mask_texts
-              )[['result']],
-              contextual_influence_safe(
-                token_embeddings,
-                norms,
-                expectation_mask_concepts
-              )[['result']]
-            ),
-            rating = value / benchmarks
-          )
-        }
-      ) 
+
+  result <- tidyr::expand_grid(
+    test_type = c('inner', if (!is.null(concepts)) 'outer' else NA_character_),
+    test_level = c('document', 'token'),
+    token = c(NA_character_, unlist(tokens))
+  ) |>
+    dplyr::filter(
+      xor(test_level == 'token', is.na(token)) & !is.na(test_type)
     )
-  }
-  
-  ##### Total ----
-  model_scores <- result |>
-    dplyr::summarise(
-      dplyr::across(
-        value,
-        c(mean = mean, max = max, sum = sum),
-        .names = '{.fn}'
-      ),
-      .by = test_type
+  result <- result |>
+    dplyr::mutate(
+      res = purrr::pmap(
+        result,
+        .evaluate_embedding,
+        text_embeddings = docs,
+        norm_embeddings = norms,
+        contrast_matrices = contrast_matrices,
+        benchmark_values = benchmarks
+      )
     ) |>
-    tidyr::pivot_wider(
-      names_from = test_type,
-      values_from = c(mean, max, sum)
+    tidyr::unnest(res) |>
+    dplyr::mutate(
+      token = dplyr::if_else(token == '1', '[CLS]', token),
+      dplyr::across(
+        c(test_type, test_level, contrast),
+        factor
+      )
     )
+  
+  ##### Aggregate Scores ----
+  if (bind_aggregate_scores) {
+    model_scores <- result |>
+      dplyr::summarise(
+        dplyr::across(
+          value,
+          c(mean = mean, max = max),
+          .names = '{.fn}'
+        ),
+        .by = c(test_type, contrast)
+      ) |>
+      tidyr::pivot_wider(
+        names_from = c(test_type, contrast),
+        values_from = c(mean, max)
+      )
+  } else {
+    model_scores <- NULL
+  }
 
   #### Final Value ----
   tibble::tibble(
@@ -393,9 +496,7 @@ test_embeddings <- function(
     layers = paste(as.character(layers), collapse = ':'),
     duration_corpus = duration_docs,
     duration_concepts = duration_norms,
-    results = list(
-      dplyr::mutate(result, dplyr::across(dplyr::starts_with('test_'), factor))
-    )
+    results = result
   ) |>
     dplyr::bind_cols(model_scores)
 }

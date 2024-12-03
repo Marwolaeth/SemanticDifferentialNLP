@@ -29,15 +29,14 @@ source('cat-bert-functions.R')
 ### Polarity encoding ----
 #### Attitudes ----
 (verbs_data <- c(
-  'love'         =  1,
-  'hate'         = -1,
-  'like'         =  1,
-  "don't like"   = -1,
-  'take care of' =  1,
-  'screw'        = -1,
-  'save'         =  1,
-  'dislike'      = -1,
-  'adore'        =  1
+  'love'            =  1,
+  'hate'            = -1,
+  'like'            =  1,
+  "don't like"      = -1,
+  'sympathize with' =  1,
+  'despise'         = -1,
+  'adore'           =  1,
+  'dislike'         = -1
 ))
 (verbs <- names(verbs_data))
 
@@ -62,8 +61,13 @@ verb_norms$texts$love
 ))
 
 ## Expectation vectors ----
-(eval_matrix <- as.matrix(verbs_data) %*% t(verbs_data))
-isSymmetric(eval_matrix)
+(polarity_matrix <- as.matrix(verbs_data) %*% t(verbs_data))
+isSymmetric(polarity_matrix)
+
+identity_matrix <- diag(length(verbs))
+dimnames(identity_matrix) <- dimnames(polarity_matrix)
+isSymmetric(identity_matrix)
+identity_matrix
 
 ## The Documents ----
 docs <- textEmbed(
@@ -80,24 +84,38 @@ docs <- textEmbed(
 
 # The Experiment ----
 ## Embeddings ----
+### One Model (visualisation) ----
+semantic_divergence(
+  docs$texts$texts, polarity_matrix, plot = TRUE, labels_col = verbs
+)
+contextual_influence(docs$texts$texts, verb_norms, polarity_matrix, plot = TRUE)
+
+### Many Models (benchmark) ----
 model_data <- expand.grid(
   model = list(
     'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1',
     'facebook/bart-large-mnli',
-    'isolation-forest/setfit-absa-polarity'
+    'isolation-forest/setfit-absa-polarity',
+    'DeepPavlov/bert-base-cased-conversational'
   ),
-  layers = list(-1, -2:-1)
+  layers = list(-1, -2:-1, -2)
 )
 
 test <- purrr:::pmap_dfr(
   model_data,
   test_embeddings,
   corpus = texts,
-  expectation_mask_texts = eval_matrix,
+  expected_inner_similarities = list(polarity = polarity_matrix),
   concepts = verbs,
-  expectation_mask_concepts = eval_matrix,
+  expected_outer_similarities = list(
+    polarity = polarity_matrix,
+    identity = identity_matrix
+  ),
   tokens = list(1L, '.?cat.?', '.?I')
 )
 test
+
+test2 <- test |>
+  tidyr::unnest(results)
 
 ## Zero-shot ----
