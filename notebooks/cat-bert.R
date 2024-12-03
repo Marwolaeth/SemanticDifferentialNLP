@@ -93,12 +93,13 @@ contextual_influence(docs$texts$texts, verb_norms, polarity_matrix, plot = TRUE)
 ### Many Models (benchmark) ----
 model_data <- expand.grid(
   model = list(
-    'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1',
-    'facebook/bart-large-mnli',
+    # 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1',
+    # 'facebook/bart-large-mnli',
     'isolation-forest/setfit-absa-polarity',
     'DeepPavlov/bert-base-cased-conversational'
   ),
-  layers = list(-1, -2:-1, -2)
+  layers = list(-1, -2:-1, -2),
+  similarity_metrics = c('cosine', 'spearman', 'euclidean')
 )
 
 test <- purrr:::pmap_dfr(

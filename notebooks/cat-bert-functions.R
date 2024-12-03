@@ -122,14 +122,35 @@ text_sumularity_heatmap <- function(m, ...) {
 ## Computes normalized similarities between text embeddings and concept embeddings.
 mapTextSimilarityNorm <- function(
     text_embeddings,
-    norm_embeddings
+    norm_embeddings,
+    method = 'cosine'
 ) {
   vapply(
     norm_embeddings$texts,
-    \(norm) textSimilarityNorm(text_embeddings, norm),
+    \(norm) textSimilarityNorm(text_embeddings, norm, method = method),
     numeric(nrow(text_embeddings)),
     USE.NAMES = TRUE
   )
+}
+
+norm_cosine_similarity <- function(
+    text_embeddings,
+    norm_embeddings
+) {
+  texts <- text_embeddings |>
+    dplyr::select(dplyr::starts_with('Dim')) |>
+    as.matrix()
+  concepts <- norm_embeddings$texts |>
+    purrr::map(as.matrix) |>
+    purrr::reduce(rbind)
+  
+  
+  texts_norms <- sqrt(rowSums(texts^2))
+  concept_norms <- sqrt(rowSums(concepts^2))
+
+  S <- (texts %*% t(concepts)) / (texts_norms %*% t(concept_norms))
+  colnames(S) <- names(norm_embeddings$texts)
+  return(S)
 }
 
 ## Evaluation ----
@@ -207,6 +228,7 @@ contextual_influence <- function(
     embeddings,
     concept_embeddings,
     contrast_matrix,
+    metric = 'cosine',
     plot = FALSE,
     ...
 ) {
@@ -219,7 +241,7 @@ contextual_influence <- function(
     stop('Expectation mask matrix must be of shape (n_texts × n_concepts)')
   }
   
-  sim <- mapTextSimilarityNorm(embeddings, concept_embeddings)
+  sim <- mapTextSimilarityNorm(embeddings, concept_embeddings, method = metric)
   
   score <- sum(sim * contrast_matrix)
   
@@ -245,8 +267,17 @@ contextual_influence <- function(
 )
 
 .contextual_influence_safe <- purrr::safely(
-  function(embeddings, concept_embeddings, contrast_matrix) {
-    sim <- mapTextSimilarityNorm(embeddings, concept_embeddings)
+  function(
+    embeddings,
+    concept_embeddings,
+    contrast_matrix,
+    metric = 'cosine'
+  ) {
+    sim <- mapTextSimilarityNorm(
+      embeddings,
+      concept_embeddings,
+      method = metric
+    )
     sum(sim * contrast_matrix)
   },
   otherwise = NaN
@@ -272,6 +303,7 @@ contextual_influence <- function(
     test_type,
     test_level,
     token,
+    metric = 'cosine',
     text_embeddings,
     norm_embeddings,
     contrast_matrices,
@@ -279,12 +311,12 @@ contextual_influence <- function(
 ) {
   test_type <- match.arg(test_type, c('inner', 'outer'), several.ok = FALSE)
   if (test_type == 'inner') {
-    test <- function(e, norms, m) {
+    test <- function(e, norms, m, metric) {
       .semantic_divergence_safe(e, m)[['result']]
     }
   } else {
     test <- function(e, norms, m) {
-      .contextual_influence_safe(e, norms, m)[['result']]
+      .contextual_influence_safe(e, norms, m, metric)[['result']]
     }
   }
   
@@ -319,6 +351,7 @@ test_embeddings <- function(
     expected_outer_similarities = NULL,
     tokens = NULL,
     layers = -1,
+    similarity_metrics = 'cosine',
     bind_aggregate_scores = FALSE,
     ...
 ) {
@@ -446,7 +479,8 @@ test_embeddings <- function(
   result <- tidyr::expand_grid(
     test_type = c('inner', if (!is.null(concepts)) 'outer' else NA_character_),
     test_level = c('document', 'token'),
-    token = c(NA_character_, unlist(tokens))
+    token = c(NA_character_, unlist(tokens)),
+    metric = similarity_metrics
   ) |>
     dplyr::filter(
       xor(test_level == 'token', is.na(token)) & !is.na(test_type)
@@ -466,7 +500,7 @@ test_embeddings <- function(
     dplyr::mutate(
       token = dplyr::if_else(token == '1', '[CLS]', token),
       dplyr::across(
-        c(test_type, test_level, contrast),
+        c(test_type, test_level, contrast, metric),
         factor
       )
     )

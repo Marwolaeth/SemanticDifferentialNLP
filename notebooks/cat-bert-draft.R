@@ -47,7 +47,6 @@ model <- 'fyaronskiy/ruRoberta-large-ru-go-emotions'
 ))
 verb_norms$texts$love
 
-
 # textEmbedRawLayers(
 #   tolower(texts),
 #   model = model,
@@ -57,7 +56,7 @@ verb_norms$texts$love
 # )
 ### Create Documents ----
 docs <- textEmbed(
-  tolower(texts),
+  texts,
   model = model,
   layers = -1,
   # layers = 11:12,
@@ -70,6 +69,22 @@ docs <- textEmbed(
 # docs$word_types
 # docs$tokens
 # comment(docs$word_types)
+
+### Performance Benchmarks ----
+a <- mapTextSimilarityNorm(docs$texts$texts, verb_norms)
+b <- norm_cosine_similarity(docs$texts$texts, verb_norms)
+a-b
+all.equal(a, b)
+sum((a-b)^2)
+bench <- microbenchmark::microbenchmark(
+  vapply = mapTextSimilarityNorm(docs$texts$texts, verb_norms),
+  matrix = norm_cosine_similarity(docs$texts$texts, verb_norms),
+  times = 100L
+)
+bench
+save(bench, file = file.path('benchmarks', 'similarity.RData'))
+
+mapTextSimilarityNorm(docs$texts$texts, verb_norms, method = 'spearman')
 
 ### Compare ----
 #### Documents ----
@@ -93,7 +108,11 @@ text_sumularity_heatmap(love_similarity, labels_row = texts)
 t(love_similarity) %*% verbs_data
 expectation_match(love_similarity, verbs_data)
 
-doc_verb_similarity <- mapTextSimilarityNorm(docs$texts$texts, verb_norms)
+doc_verb_similarity <- mapTextSimilarityNorm(
+  docs$texts$texts,
+  verb_norms,
+  method = 'euclidean'
+)
 verb_norms_test <- verb_norms
 verb_norms_test$texts <- verb_norms_test$texts[1:6]
 mapTextSimilarityNorm(docs$texts$texts, verb_norms_test)
