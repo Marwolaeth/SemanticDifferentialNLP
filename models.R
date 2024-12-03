@@ -240,3 +240,7 @@ models_df <- models_df |>
 models_df
 summary(models_df)
 
+save(models_df, file = file.path('data', 'models', 'models.RData'))
+
+models_english <- dplyr::filter(models_df, lang == 'en')
+save(models_df, file = file.path('data', 'models', 'english.RData'))
