@@ -1,0 +1,34 @@
+---
+title: "Zero-Shot Classification: Advantages for Brand Perception Analysis"
+author: "marwolaeth"
+bibliography: references.bib
+format:
+  html:
+    theme: United
+execute: 
+  cache: true
+  warning: false
+  echo: true
+---
+
+Zero-shot classification presents several key advantages that align perfectly with our goals in assessing brand perception through media text analysis:
+
+## 1. **Rapid Deployment**
+- **Immediate Insights**: In a fast-paced environment, we often need to start reporting quickly. Zero-shot classification allows us to leverage pre-trained models without the time-consuming process of collecting labelled data for fine-tuning.
+
+## 2. **Flexibility with Unknown Classes**
+- **Adapting to Varied Brand Markers**: Brand image markers can vary widely among different clients. Zero-shot approaches enable us to classify sentiments and attributes without needing prior knowledge of specific classes, making it easier to adapt to diverse brand perceptions.
+
+## 3. **Cost-Effectiveness**
+- **Resource Efficiency**: Collecting and labeling data can be costly and impractical. Zero-shot classification reduces the need for extensive datasets, allowing us to focus resources on analysis and insights rather than data preparation.
+
+## 4. **Robust Semantic Understanding**
+- **Contextual Insights**: By leveraging the semantic understanding of transformer models, we can capture nuanced sentiments related to brand perceptions, even when the specific markers are not predefined.
+
+In summary, zero-shot classification not only enables quicker responses to client needs but also provides the flexibility to analyze diverse brand images effectively. This approach is invaluable in our role as media analysts, where understanding sentiment and context is crucial for delivering actionable insights.
+
+## References
+
+::: {#refs}
+
+:::
