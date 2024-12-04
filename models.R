@@ -10,6 +10,7 @@ match_arch <- function(model_name) {
   
   dplyr::case_when(
     re.match(model_name, '((Distill?)|(fin))RoBERTa') ~ 'DistilRoBERTa',
+    re.match(model_name, '(ERNIE)|(uie)|(word2affect)') ~ 'ERNIE',
     re.match(model_name, 'Distill?.*BERT') ~ 'DistilBERT',
     re.match(model_name, 'Contriever') ~ 'Contriever',
     re.match(model_name, 'conv.*bert') ~ 'ConvBERT',
@@ -19,7 +20,6 @@ match_arch <- function(model_name) {
     re.match(model_name, 'ELECTRA') ~ 'ELECTRA',
     re.match(model_name, 'ALBERT') ~ 'ALBERT',
     re.match(model_name, 'MiniLM') ~ 'MiniLM',
-    re.match(model_name, 'ERNIE') ~ 'ERNIE',
     re.match(model_name, 'XLNet') ~ 'XLNet',
     re.match(model_name, 'BERT') ~ 'BERT',
     re.match(model_name, 'BART') ~ 'BART',
@@ -99,7 +99,7 @@ models <- list(
       task = c('NLI')
     ),
     #### Other ----
-    base = tibble::tibble(
+    foundational = tibble::tibble(
       model = c(
         'bert-base-uncased',
         'Akirami/distillbert-uncased-ag-news',
@@ -142,7 +142,15 @@ models <- list(
         'isolation-forest/setfit-absa-polarity',
         'mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis',
         'kekunh/fine_tuned_finroberta',
-        'rnribeiro/FT-mrm8488-distilroberta-finetuned-financial-news-sentiment-analysis'
+        'rnribeiro/FT-mrm8488-distilroberta-finetuned-financial-news-sentiment-analysis',
+        'PaddlePaddle/uie-base-en',
+        'PaddlePaddle/ernie-2.0-large-en',
+        'PaddlePaddle/ernie-2.0-base-en',
+        'nghuyong/ernie-2.0-base-en',
+        'PaddlePaddle/uie-mini',
+        'PaddlePaddle/uie-micro',
+        'DunnBC22/ernie-2.0-base-en-Tweet_About_Disaster_Or_Not',
+        'hplisiecki/word2affect_english'
       ),
       type = match_arch(model),
       sentence_level = match_type(model),
@@ -172,7 +180,7 @@ models <- list(
       task = c('NLI')
     ),
     #### Other ----
-    base = tibble::tibble(
+    foundational = tibble::tibble(
       model = c(
         'FacebookAI/xlm-roberta-base',
         'FacebookAI/xlm-roberta-large',
@@ -243,4 +251,4 @@ summary(models_df)
 save(models_df, file = file.path('data', 'models', 'models.RData'))
 
 models_english <- dplyr::filter(models_df, lang == 'en')
-save(models_df, file = file.path('data', 'models', 'english.RData'))
+save(models_english, file = file.path('data', 'models', 'english.RData'))
