@@ -2,7 +2,7 @@ library(text)
 
 # Utility Functions ----
 ## Embedding Utilities ----
-extract_duration <- function(text_embeddings) {
+.extract_duration <- function(text_embeddings) {
   m <- regexpr(
     '\\d*\\.\\d+(?=\\s+secs)',
     comment(text_embeddings),
@@ -120,7 +120,7 @@ text_sumularity_heatmap <- function(m, ...) {
 
 ## Similarity with multiple concepts ----
 ## Computes normalized similarities between text embeddings and concept embeddings.
-mapTextSimilarityNorm <- function(
+.mapTextSimilarityNorm <- function(
     text_embeddings,
     norm_embeddings,
     method = 'cosine'
@@ -133,10 +133,13 @@ mapTextSimilarityNorm <- function(
   )
 }
 
-norm_cosine_similarity <- function(
+similarity_norm <- function(
     text_embeddings,
-    norm_embeddings
+    norm_embeddings,
+    metric = 'cosine'
 ) {
+  metric <- match.arg(metric, c('cosine', 'spearman', 'pearson', 'kendall'))
+  
   texts <- text_embeddings |>
     dplyr::select(dplyr::starts_with('Dim')) |>
     as.matrix()
@@ -144,14 +147,19 @@ norm_cosine_similarity <- function(
     purrr::map(as.matrix) |>
     purrr::reduce(rbind)
   
+  if (metric == 'cosine') {
+    texts_norms <- sqrt(rowSums(texts^2))
+    concept_norms <- sqrt(rowSums(concepts^2))
+    
+    S <- (texts %*% t(concepts)) / (texts_norms %*% t(concept_norms))
+  } else {
+    S <- cor(t(texts), t(concepts), method = metric)
+  }
   
-  texts_norms <- sqrt(rowSums(texts^2))
-  concept_norms <- sqrt(rowSums(concepts^2))
-
-  S <- (texts %*% t(concepts)) / (texts_norms %*% t(concept_norms))
   colnames(S) <- names(norm_embeddings$texts)
   return(S)
 }
+similarity_norm <- compiler::cmpfun(similarity_norm, options = list(optimize=3))
 
 ## Evaluation ----
 ### For standalone experiments ----
@@ -201,6 +209,7 @@ select_tokens <- function(
 semantic_divergence <- function(
     embeddings,
     contrast_matrix,
+    metric = 'cosine',
     plot = FALSE,
     ...
 ) {
@@ -208,7 +217,7 @@ semantic_divergence <- function(
     stop('Expectation mask matrix dimensions must math the number of documents')
   }
   
-  sim <- textSimilarityMatrix(embeddings)
+  sim <- textSimilarityMatrix(embeddings, method = metric)
   
   score <- sum(sim * contrast_matrix)
   
@@ -241,7 +250,7 @@ contextual_influence <- function(
     stop('Expectation mask matrix must be of shape (n_texts × n_concepts)')
   }
   
-  sim <- mapTextSimilarityNorm(embeddings, concept_embeddings, method = metric)
+  sim <- .mapTextSimilarityNorm(embeddings, concept_embeddings, method = metric)
   
   score <- sum(sim * contrast_matrix)
   
@@ -259,8 +268,8 @@ contextual_influence <- function(
 
 ## Test embeddings capturing meaning ----
 .semantic_divergence_safe <- purrr::safely(
-  function(embeddings, contrast_matrix) {
-    sim <- textSimilarityMatrix(embeddings)
+  function(embeddings, contrast_matrix, metric = 'cosine') {
+    sim <- textSimilarityMatrix(embeddings, method = metric)
     sum(sim * contrast_matrix)
   },
   otherwise = NaN
@@ -273,10 +282,10 @@ contextual_influence <- function(
     contrast_matrix,
     metric = 'cosine'
   ) {
-    sim <- mapTextSimilarityNorm(
+    sim <- similarity_norm(
       embeddings,
       concept_embeddings,
-      method = metric
+      metric = metric
     )
     sum(sim * contrast_matrix)
   },
@@ -312,10 +321,10 @@ contextual_influence <- function(
   test_type <- match.arg(test_type, c('inner', 'outer'), several.ok = FALSE)
   if (test_type == 'inner') {
     test <- function(e, norms, m, metric) {
-      .semantic_divergence_safe(e, m)[['result']]
+      .semantic_divergence_safe(e, m, metric)[['result']]
     }
   } else {
-    test <- function(e, norms, m) {
+    test <- function(e, norms, m, metric) {
       .contextual_influence_safe(e, norms, m, metric)[['result']]
     }
   }
@@ -335,7 +344,7 @@ contextual_influence <- function(
     benchmark,
     \(m, b) {
       tibble::tibble(
-        value = test(embeddings, norm_embeddings, m),
+        value = test(embeddings, norm_embeddings, m, metric),
         rating = value / b
       )
     }

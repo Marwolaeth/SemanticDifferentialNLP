@@ -71,20 +71,25 @@ docs <- textEmbed(
 # comment(docs$word_types)
 
 ### Performance Benchmarks ----
-a <- mapTextSimilarityNorm(docs$texts$texts, verb_norms)
-b <- norm_cosine_similarity(docs$texts$texts, verb_norms)
+a <- .mapTextSimilarityNorm(docs$texts$texts, verb_norms)
+b <- similarity_norm(docs$texts$texts, verb_norms)
 a-b
 all.equal(a, b)
 sum((a-b)^2)
 bench <- microbenchmark::microbenchmark(
-  vapply = mapTextSimilarityNorm(docs$texts$texts, verb_norms),
-  matrix = norm_cosine_similarity(docs$texts$texts, verb_norms),
-  times = 100L
+  vapply = .mapTextSimilarityNorm(
+    docs$texts$texts, verb_norms, method = 'spearman'
+  ),
+  matrix = similarity_norm(docs$texts$texts, verb_norms, metric = 'spearman'),
+  times = 200L
 )
 bench
+boxplot(bench, log = FALSE)
 save(bench, file = file.path('benchmarks', 'similarity.RData'))
 
-mapTextSimilarityNorm(docs$texts$texts, verb_norms, method = 'spearman')
+.mapTextSimilarityNorm(docs$texts$texts, verb_norms, method = 'spearman')
+similarity_norm(docs$texts$texts, verb_norms, metric = 'kendall') |>
+  text_sumularity_heatmap()
 
 ### Compare ----
 #### Documents ----

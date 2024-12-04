@@ -64,10 +64,12 @@ verb_norms$texts$love
 (polarity_matrix <- as.matrix(verbs_data) %*% t(verbs_data))
 isSymmetric(polarity_matrix)
 
-identity_matrix <- diag(length(verbs))
+identity_matrix <- matrix(-1, nrow = length(verbs), ncol = length(verbs))
+diag(identity_matrix) <- 1
 dimnames(identity_matrix) <- dimnames(polarity_matrix)
 isSymmetric(identity_matrix)
 identity_matrix
+sum(identity_matrix * identity_matrix)
 
 ## The Documents ----
 docs <- textEmbed(
@@ -84,27 +86,22 @@ docs <- textEmbed(
 
 # The Experiment ----
 ## Embeddings ----
-### One Model (visualisation) ----
-semantic_divergence(
-  docs$texts$texts, polarity_matrix, plot = TRUE, labels_col = verbs
-)
-contextual_influence(docs$texts$texts, verb_norms, polarity_matrix, plot = TRUE)
-
 ### Many Models (benchmark) ----
 model_data <- expand.grid(
   model = list(
-    # 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1',
-    # 'facebook/bart-large-mnli',
+    'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1',
+    'facebook/bart-large-mnli',
     'isolation-forest/setfit-absa-polarity',
-    'DeepPavlov/bert-base-cased-conversational'
+    'DeepPavlov/bert-base-cased-conversational',
+    'cross-encoder/nli-deberta-v3-base'
   ),
-  layers = list(-1, -2:-1, -2),
-  similarity_metrics = c('cosine', 'spearman', 'euclidean')
+  layers = list(-1, -2:-1, -2, -3)
 )
 
 test <- purrr:::pmap_dfr(
   model_data,
   test_embeddings,
+  similarity_metrics = c('cosine', 'spearman', 'kendall'),
   corpus = texts,
   expected_inner_similarities = list(polarity = polarity_matrix),
   concepts = verbs,
@@ -118,5 +115,59 @@ test
 
 test2 <- test |>
   tidyr::unnest(results)
+
+test2 |>
+  dplyr::mutate(
+    token = forcats::fct_explicit_na(token),
+    layers = forcats::fct(layers)
+  ) |>
+  dplyr::select(-model, -token) |>
+  na.omit() |>
+  # summary()
+  correlationfunnel::binarize(one_hot = TRUE, thresh_infreq = .5, n_bins = 6) |>
+  correlationfunnel::correlate()
+
+### Illustrations ----
+model <- 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1'
+layers <- -1
+metric <- 'cosine'
+docs <- textEmbed(
+  texts,
+  model = model,
+  layers = layers,
+  aggregation_from_layers_to_tokens = 'concatenate',
+  keep_token_embeddings = TRUE,
+  tokenizer_parallelism = TRUE,
+  remove_non_ascii = FALSE
+)
+verb_norms <- textEmbed(
+  verbs_tbl,
+  model = model,
+  layers = layers,
+  keep_token_embeddings = FALSE,
+  tokenizer_parallelism = TRUE,
+  trust_remote_code = TRUE
+)
+semantic_divergence(
+  docs$texts$texts,
+  polarity_matrix,
+  metric = metric,
+  plot = TRUE,
+  labels_col = verbs
+)
+contextual_influence(
+  docs$texts$texts,
+  verb_norms,
+  polarity_matrix,
+  metric = metric,
+  plot = TRUE
+)
+contextual_influence(
+  docs$texts$texts,
+  verb_norms,
+  identity_matrix,
+  metric = metric,
+  plot = TRUE
+)
 
 ## Zero-shot ----
