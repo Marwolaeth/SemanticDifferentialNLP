@@ -1,6 +1,10 @@
 library(text)
 
 # Utility Functions ----
+argmax <- function(x, margin = 1) {
+  if (is.null(dim(x))) which.max(x) else apply(x, margin, which.max)
+}
+
 ## Embedding Utilities ----
 .extract_duration <- function(text_embeddings) {
   m <- regexpr(
@@ -546,4 +550,20 @@ test_embeddings <- function(
 test_embeddings <- compiler::cmpfun(test_embeddings, options = list(optimize=3))
 
 ## Test zero-shot classification quality ----
-test_zero_shot <- function(...) {...}
+test_zero_shot <- function(
+    model,
+    corpus,
+    testset,
+    metrics = c('accuracy', 'match')
+) {
+  # A testset is a list whose entries are tests. Each test is also a list
+  # containing at least two entries: a character vector of possible classes 
+  # (candidate labels, hypotheses) and a contrast matrix representing the expected
+  # score pattern. It may also contain an optional `hypothesis_template`: a 
+  # template that is used for turning each of the labels into an NLI-style 
+  # hypothesis, for example: "The movie is {}", while the candidate labels are 
+  # `c("good", "bad")`.
+  
+  accuracy <- mean(argmax(result, 1) == argmax(contrast, 1))
+  match <- sum(result * contrast)
+}

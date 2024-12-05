@@ -13,14 +13,7 @@ model <- 'cross-encoder/nli-deberta-v3-base' # WOW
 model <- 'cross-encoder/nli-deberta-v3-large' # Good for Zero-shot, bad otherwise
 model <- 'cross-encoder/nli-deberta-v3-small' # So-so
 model <- 'cross-encoder/nli-deberta-v3-xsmall' # Not bad for Zero-shot
-model <- 'nvidia/NV-Embed-v2'
 model <- 'cross-encoder/qnli-electra-base' # Poor
-model <- 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1' # Awful
-model <- 'MendelAI/nv-embed-v2-ontada-twab-peft'
-model <- 'facebook/bart-large-mnli'
-model <- 'isolation-forest/setfit-absa-polarity' # Pretty
-# model <- 'sentence-transrormers/paraphrase-MiniLM-L6-v2'
-# model <- 'sentence-transformers/roberta-large-nli-stsb-mean-tokens'
 
 source('cat-bert-functions.R')
 
@@ -39,21 +32,14 @@ source('cat-bert-functions.R')
   'dislike'         = -1
 ))
 (verbs <- names(verbs_data))
-
-### Word norms ----
 (verbs_tbl <- tibble::as_tibble(as.list(verbs) |> setNames(verbs)))
-(verb_norms <- textEmbed(
-  verbs_tbl,
-  model = model,
-  layers = -1,
-  keep_token_embeddings = FALSE,
-  tokenizer_parallelism = TRUE,
-  trust_remote_code = TRUE
-))
-verb_norms$texts$love
 
 #### Judgements ----
 (judgement_data <- c(good = 1, bad = -1))
+(judgements <- names(judgement_data))
+(judgements_tbl <- tibble::as_tibble(
+  as.list(judgements) |> setNames(judgements))
+)
 
 ### The Texts ----
 (texts <- paste(
@@ -64,25 +50,14 @@ verb_norms$texts$love
 (polarity_matrix <- as.matrix(verbs_data) %*% t(verbs_data))
 isSymmetric(polarity_matrix)
 
+(bipolarity_matrix <- as.matrix(verbs_data) %*% t(judgement_data))
+
 identity_matrix <- matrix(-1, nrow = length(verbs), ncol = length(verbs))
 diag(identity_matrix) <- 1
 dimnames(identity_matrix) <- dimnames(polarity_matrix)
 isSymmetric(identity_matrix)
 identity_matrix
 sum(identity_matrix * identity_matrix)
-
-## The Documents ----
-docs <- textEmbed(
-  texts,
-  # tolower(texts),
-  model = model,
-  layers = -1,
-  # layers = 11:12,
-  aggregation_from_layers_to_tokens = 'concatenate',
-  keep_token_embeddings = TRUE,
-  tokenizer_parallelism = TRUE,
-  remove_non_ascii = FALSE
-)
 
 # The Experiment ----
 ## Embeddings ----
@@ -101,7 +76,7 @@ model_data <- expand.grid(
 test <- purrr:::pmap_dfr(
   model_data,
   test_embeddings,
-  similarity_metrics = c('cosine', 'spearman', 'kendall'),
+  similarity_metrics = c('cosine', 'spearman'),
   corpus = texts,
   expected_inner_similarities = list(polarity = polarity_matrix),
   concepts = verbs,
@@ -128,7 +103,7 @@ test2 |>
   correlationfunnel::correlate()
 
 ### Illustrations ----
-model <- 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1'
+model <- 'sentence-transformers/all-roberta-large-v1'
 layers <- -1
 metric <- 'cosine'
 docs <- textEmbed(
@@ -142,6 +117,14 @@ docs <- textEmbed(
 )
 verb_norms <- textEmbed(
   verbs_tbl,
+  model = model,
+  layers = layers,
+  keep_token_embeddings = FALSE,
+  tokenizer_parallelism = TRUE,
+  trust_remote_code = TRUE
+)
+judgement_norms <- textEmbed(
+  judgements_tbl,
   model = model,
   layers = layers,
   keep_token_embeddings = FALSE,
@@ -169,5 +152,162 @@ contextual_influence(
   metric = metric,
   plot = TRUE
 )
+contextual_influence(
+  docs$texts$texts,
+  judgement_norms,
+  bipolarity_matrix,
+  metric = metric,
+  plot = TRUE
+)
 
 ## Zero-shot ----
+model <- 'ynie/electra-large-discriminator-snli_mnli_fever_anli_R1_R2_R3-nli'
+
+### Hypotheses Sets ----
+#### Identity + Polarity ----
+(hypothesis_template_identity <- 'I {} cats')
+(hypotheses_identity <- verbs)
+
+#### BiPolarity ----
+(hypothesis_template_bipolarity <- 'Cats are {}')
+(hypotheses_bipolarity <- judgements)
+
+### Results ----
+#### Identity ----
+res <- textZeroShot(
+  texts,
+  model = model,
+  candidate_labels = hypotheses_identity,
+  # hypothesis_template = hypothesis_template_identity,
+  hypothesis_template = '{}',
+  multi_label = FALSE,
+  tokenizer_parallelism = TRUE
+)
+
+res_wide <- purrr::map(
+  seq_along(hypotheses_identity),
+  function(position) {
+    p <- as.character(position)
+    res |>
+      dplyr::select(sequence, dplyr::ends_with(p)) |>
+      dplyr::mutate(rating = position) |>
+      dplyr::rename(
+        label = glue::glue('labels_x_{p}'),
+        score = glue::glue('scores_x_{p}')
+      )
+  }
+) |>
+  dplyr::bind_rows() |>
+  tidyr::pivot_wider(
+    id_cols = sequence,
+    names_from = label,
+    values_from = score
+  ) |>
+  dplyr::select(sequence, dplyr::all_of(hypotheses_identity))
+
+(res_matrix <- res_wide |>
+    tibble::column_to_rownames('sequence') |>
+    as.matrix())
+
+text_sumularity_heatmap(res_matrix)
+sum(res_matrix * identity_matrix)
+
+#### Polarity ----
+res <- textZeroShot(
+  texts,
+  model = model,
+  candidate_labels = hypotheses_identity,
+  hypothesis_template = hypothesis_template_identity,
+  multi_label = TRUE,
+  tokenizer_parallelism = TRUE
+)
+
+res_wide <- purrr::map(
+  seq_along(hypotheses_identity),
+  function(position) {
+    p <- as.character(position)
+    res |>
+      dplyr::select(sequence, dplyr::ends_with(p)) |>
+      dplyr::mutate(rating = position) |>
+      dplyr::rename(
+        label = glue::glue('labels_x_{p}'),
+        score = glue::glue('scores_x_{p}')
+      )
+  }
+) |>
+  dplyr::bind_rows() |>
+  tidyr::pivot_wider(
+    id_cols = sequence,
+    names_from = label,
+    values_from = score
+  ) |>
+  dplyr::select(sequence, dplyr::all_of(hypotheses_identity))
+
+(res_matrix <- res_wide |>
+  tibble::column_to_rownames('sequence') |>
+  as.matrix())
+
+text_sumularity_heatmap(res_matrix)
+sum(res_matrix * polarity_matrix)
+
+#### BiPolarity ----
+res <- textZeroShot(
+  texts,
+  model = model,
+  candidate_labels = hypotheses_bipolarity,
+  hypothesis_template = hypothesis_template_bipolarity,
+  multi_label = FALSE,
+  tokenizer_parallelism = TRUE
+)
+
+res_wide <- purrr::map(
+  seq_along(hypotheses_bipolarity),
+  function(position) {
+    p <- as.character(position)
+    res |>
+      dplyr::select(sequence, dplyr::ends_with(p)) |>
+      dplyr::mutate(rating = position) |>
+      dplyr::rename(
+        label = glue::glue('labels_x_{p}'),
+        score = glue::glue('scores_x_{p}')
+      )
+  }
+) |>
+  dplyr::bind_rows() |>
+  tidyr::pivot_wider(
+    id_cols = sequence,
+    names_from = label,
+    values_from = score
+  ) |>
+  dplyr::select(sequence, dplyr::all_of(hypotheses_bipolarity))
+
+(res_matrix <- res_wide |>
+    tibble::column_to_rownames('sequence') |>
+    as.matrix())
+
+sum(bipolarity_matrix * (bipolarity_matrix > 0))
+text_sumularity_heatmap(res_matrix)
+sum(res_matrix * bipolarity_matrix)
+
+argmax(res_matrix) == argmax(bipolarity_matrix)
+
+zeroShotTest <- setClass(
+  'zeroShotTest',
+  contains = 'list',
+  slots = c(
+    num_examples='integer',
+    classes='character',
+    template='character',
+    contrasts='matrix'
+  ),
+  prototype = list(template='{}')
+)
+zeroShotTest
+
+new(
+  'zeroShotTest',
+  num_examples = length(texts),
+  classes = judgements,
+  template = 'Cats are {}',
+  contrasts = bipolarity_matrix
+)
