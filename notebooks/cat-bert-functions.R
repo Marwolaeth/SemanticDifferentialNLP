@@ -461,7 +461,7 @@ test_embeddings <- function(
       tokenizer_parallelism = TRUE,
       ...
     )
-    duration_norms <- extract_duration(norms)
+    duration_norms <- .extract_duration(norms)
   } else {
     norms <- NULL
     duration_norms <- NaN
@@ -481,7 +481,7 @@ test_embeddings <- function(
     tokenizer_parallelism = TRUE,
     ...
   )
-  duration_docs <- extract_duration(docs)
+  duration_docs <- .extract_duration(docs)
   
   #### The Tests ----
   contrast_matrices <- list(
