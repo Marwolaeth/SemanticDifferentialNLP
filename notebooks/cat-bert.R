@@ -62,20 +62,19 @@ sum(identity_matrix * identity_matrix)
 # The Experiment ----
 ## Embeddings ----
 ### Many Models (benchmark) ----
+#### English ----
+load(file.path('data', 'models', 'english.RData'))
+models <- models_english |>
+  dplyr::filter(ok)
+
 model_data <- expand.grid(
-  model = list(
-    'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1',
-    'facebook/bart-large-mnli',
-    'isolation-forest/setfit-absa-polarity',
-    'DeepPavlov/bert-base-cased-conversational',
-    'cross-encoder/nli-deberta-v3-base'
-  ),
+  model = models$model,
   layers = list(-1, -2:-1, -2, -3)
 )
 
-test <- purrr:::pmap_dfr(
+test <- purrr:::pmap(
   model_data,
-  test_embeddings,
+  purrr::safely(test_embeddings),
   similarity_metrics = c('cosine', 'spearman'),
   corpus = texts,
   expected_inner_similarities = list(polarity = polarity_matrix),
@@ -87,6 +86,7 @@ test <- purrr:::pmap_dfr(
   tokens = list(1L, '.?cat.?', '.?I')
 )
 test
+save(test, file = file.path('benchmarks', 'embedding-quality-en.RData'))
 
 test2 <- test |>
   tidyr::unnest(results)
