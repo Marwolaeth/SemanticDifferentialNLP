@@ -29,3 +29,19 @@ with torch.inference_mode():
     p = torch.softmax(prediction.logits, -1).cpu().numpy()[0]
 print({v: p[k] for k, v in model.config.id2label.items()})
 # {'not_entailment': 0.60584205, 'entailment': 0.3941579}
+
+
+# A tricky example
+# Many NLI models fail to refute premise-hypothesis pairs like:
+# 'It is good for our enemies that X' — 'It is good for us that X'
+# This contradiction is quite clear, yet many NLI models struggle to accurately identify it, 
+# highlighting their limitations in understanding conflicting sentiments in natural language inference.
+premise3 = 'Для наших врагов хорошо, что это дерево красное.'
+hypothesis3 = 'Для нас хорошо, что это дерево красное.'
+with torch.inference_mode():
+    prediction = model(
+      **tokenizer(premise3, hypothesis3, return_tensors='pt').to(model.device)
+    )
+    p = torch.softmax(prediction.logits, -1).cpu().numpy()[0]
+print({v: p[k] for k, v in model.config.id2label.items()})
+# {'not_entailment': 0.54253, 'entailment': 0.45746994}
