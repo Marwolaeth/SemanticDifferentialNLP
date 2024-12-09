@@ -72,7 +72,7 @@ model_data <- expand.grid(
   layers = list(-1, -2:-1, -2, -3)
 )
 
-test <- purrr:::pmap(
+embquality_test <- purrr:::pmap(
   model_data,
   purrr::safely(test_embeddings),
   similarity_metrics = c('cosine', 'spearman'),
@@ -85,13 +85,21 @@ test <- purrr:::pmap(
   ),
   tokens = list(1L, '.?cat.?', '.?I')
 )
-test
-save(test, file = file.path('benchmarks', 'embedding-quality-en.RData'))
+embquality_test
+purrr::map(embquality_test, 'error')
+model_data[213:214,]
 
-test2 <- test |>
+embquality <- embquality_test |>
+  purrr::map('result') |>
+  dplyr::bind_rows() |>
   tidyr::unnest(results)
 
-test2 |>
+save(
+  embquality_test, embquality,
+  file = file.path('benchmarks', 'embedding-quality-en.RData')
+)
+
+embquality |>
   dplyr::mutate(
     token = forcats::fct_explicit_na(token),
     layers = forcats::fct(layers)
