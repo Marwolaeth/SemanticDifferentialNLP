@@ -45,3 +45,13 @@ with torch.inference_mode():
     p = torch.softmax(prediction.logits, -1).cpu().numpy()[0]
 print({v: p[k] for k, v in model.config.id2label.items()})
 # {'not_entailment': 0.54253, 'entailment': 0.45746994}
+
+premise4 = 'в ркн, работают ебаные имбицылы, с мозгами как у курицы'
+hypothesis4 = 'Я одобряю РКН'
+with torch.inference_mode():
+    prediction = model(
+      **tokenizer(premise4, hypothesis4, return_tensors='pt').to(model.device)
+    )
+    p = torch.softmax(prediction.logits, -1).cpu().numpy()[0]
+print({v: p[k] for k, v in model.config.id2label.items()})
+# {'not_entailment': 0.67889595, 'entailment': 0.32110408}
