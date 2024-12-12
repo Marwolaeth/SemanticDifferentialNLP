@@ -2,7 +2,8 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-model_id = 'Marwolaeth/rubert-tiny-nli-terra-v0'
+# model_id = 'Marwolaeth/rubert-tiny-nli-terra-v0'
+model_id = 'Marwolaeth/rosberta-nli-terra-v0'
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 model = AutoModelForSequenceClassification.from_pretrained(model_id)
 if torch.cuda.is_available():
@@ -55,3 +56,14 @@ with torch.inference_mode():
     p = torch.softmax(prediction.logits, -1).cpu().numpy()[0]
 print({v: p[k] for k, v in model.config.id2label.items()})
 # {'not_entailment': 0.67889595, 'entailment': 0.32110408}
+
+
+premise5 = 'I hate cats'
+hypothesis5 = 'I love cats'
+with torch.inference_mode():
+    prediction = model(
+      **tokenizer(premise5, hypothesis5, return_tensors='pt').to(model.device)
+    )
+    p = torch.softmax(prediction.logits, -1).cpu().numpy()[0]
+print({v: p[k] for k, v in model.config.id2label.items()})
+# {'not_entailment': 0.93583775, 'entailment': 0.064162225}
