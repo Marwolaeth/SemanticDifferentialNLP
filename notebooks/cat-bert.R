@@ -14,8 +14,9 @@ model <- 'cross-encoder/nli-deberta-v3-large' # Good for Zero-shot, bad otherwis
 model <- 'cross-encoder/nli-deberta-v3-small' # So-so
 model <- 'cross-encoder/nli-deberta-v3-xsmall' # Not bad for Zero-shot
 model <- 'cross-encoder/qnli-electra-base' # Poor
+model <- 'Marwolaeth/rosberta-nli-terra-v0'
 
-source('cat-bert-functions.R')
+source('notebooks/cat-bert-functions.R')
 
 # The Data ----
 ## The Concepts ----
