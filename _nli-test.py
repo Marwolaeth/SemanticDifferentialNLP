@@ -21,7 +21,7 @@ print({v: p[k] for k, v in model.config.id2label.items()})
 # {'not_entailment': 0.7698182, 'entailment': 0.23018183}
 
 # An example concerning sentiments
-premise2 = 'Я ненавижу желтые занавески'
+premise2 = 'Я не люблю желтые занавески'
 hypothesis2 = 'Мне нравятся желтые занавески'
 with torch.inference_mode():
     prediction = model(
@@ -58,7 +58,7 @@ print({v: p[k] for k, v in model.config.id2label.items()})
 # {'not_entailment': 0.67889595, 'entailment': 0.32110408}
 
 
-premise5 = 'I hate cats'
+premise5 = 'I despise cats'
 hypothesis5 = 'I love cats'
 with torch.inference_mode():
     prediction = model(
@@ -67,3 +67,22 @@ with torch.inference_mode():
     p = torch.softmax(prediction.logits, -1).cpu().numpy()[0]
 print({v: p[k] for k, v in model.config.id2label.items()})
 # {'not_entailment': 0.93583775, 'entailment': 0.064162225}
+
+from transformers import pipeline
+
+classifier = pipeline(
+  'zero-shot-classification',
+  model='Marwolaeth/rosberta-nli-terra-v0'
+)
+
+classifier(
+  'в ркн, работают ебаные имбицылы, с мозгами как у курицы',
+  candidate_labels=['хороший', 'плохой'],
+  hypothesis_template='РКН {}'
+)
+
+classifier(
+  'similarity: в ркн, работают ебаные имбицылы, с мозгами как у курицы',
+  candidate_labels=['хороший', 'плохой'],
+  hypothesis_template='РКН {}'
+)
