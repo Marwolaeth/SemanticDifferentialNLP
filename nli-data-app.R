@@ -1,6 +1,7 @@
 library(shiny)
-library(dplyr)
 library(readr)
+library(dplyr)
+library(forcats)
 
 DATA_VARIABLES <- c(
   'premise',
@@ -10,12 +11,25 @@ DATA_VARIABLES <- c(
   'idx'
 )
 
+LABELS3 <- c(
+  'Entailment' = 'entailment',
+  'Contradiction' = 'contradiction',
+  'Neutral' = 'neutral'
+)
+
+LABELS2 <- list(
+  'entailment' = 'entailment',
+  'not_entailment' = c('contradiction', 'neutral')
+)
+
 # UI ----
 ui <- fluidPage(
   titlePanel('Natural Language Inference Data Preparation'),
   sidebarLayout(
     sidebarPanel(
       width = 12,
+      
+      ## File Management ----
       fileInput(
         'file',
         'Load existing CSV file:',
@@ -23,35 +37,36 @@ ui <- fluidPage(
           'text/csv', 'text/comma-separated-values,text/plain', '.csv'
         )
       ),
-      actionButton("load", "Load"),
+      fluidRow(
+        column(width = 6, actionButton('load', 'Load')),
+        column(width = 6, downloadButton('download', 'Download CSV'))
+      ),
       hr(),
       
+      ## Text Input ----
       textAreaInput(
         'premise',
         'Premise:',
         '',
-        rows = 5,
+        rows = 4,
         resize = 'vertical'
       ),
       textAreaInput(
         'hypothesis',
         'Hypothesis:',
         '',
-        rows = 3,
+        rows = 2,
         resize = 'vertical'
       ),
+      ## Labels ----
       radioButtons(
         'label',
         'Label:',
-        choices = list(
-          'Entailment' = 'entailment',
-          'Not entailment' = 'not_entailment'
-        ),
-        selected = 'not_entailment'
+        choices = LABELS3,
+        selected = 'neutral',
+        inline = TRUE
       ),
       actionButton('submit', 'Submit'),
-      hr(),
-      downloadButton('download', 'Download CSV'),
       textOutput('status')
     ),
     mainPanel(
@@ -87,7 +102,7 @@ server <- function(input, output, session) {
       output$status <- renderText('Data loaded successfully!')
     } else {
       output$status <- renderText(
-        "Error: Loaded file must contain 'premise', 'hypothesis', 'label', and 'idx' columns."
+        "Error: Loaded file must contain 'premise', 'hypothesis', 'label2', ', 'label3', and 'idx' columns."
       )
     }
   })
@@ -101,7 +116,8 @@ server <- function(input, output, session) {
       data <- tibble(
         premise = character(),
         hypothesis = character(),
-        label = character(),
+        label2 = factor(levels = LABELS2),
+        label3 = factor(levels = names(LABELS2)),
         idx = integer()
       )
       idx <- 1L # Start index at 1 if file does not exist
@@ -114,9 +130,13 @@ server <- function(input, output, session) {
     new_row <- tibble(
       premise = input$premise,
       hypothesis = input$hypothesis,
-      label = input$label,
+      label3 = input$label,
       idx = idx,
-    )
+    ) |>
+      mutate(
+        label2 = fct_collapse(label3, !!!LABELS2),
+        .before = label3
+      )
     idx <- idx + 1L
     
     # Append new row to the data
@@ -133,10 +153,10 @@ server <- function(input, output, session) {
     # Clear inputs after submission
     # updateTextInput(session, 'premise', value = '')
     updateTextInput(session, 'hypothesis', value = '')
-    updateRadioButtons(session, 'label', selected = 'not_entailment')
+    updateRadioButtons(session, 'label', selected = 'neutral')
   })
   
-  # Download handler for the CSV file
+  ## Download ----
   output$download <- downloadHandler(
     filename = function() {
       paste0("nli_data_", Sys.Date(), ".csv")
