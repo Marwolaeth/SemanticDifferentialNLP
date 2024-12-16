@@ -9,12 +9,12 @@ model <- 'bert-base-uncased' # Love and hate are very close to me tonight©
 # model <- 'Capreolus/electra-base-msmarco' # Raw
 # model <- 'ChrisZeng/electra-large-discriminator-nli-efl-hateval' # Electra <3
 # model <- 'ynie/albert-xxlarge-v2-snli_mnli_fever_anli_R1_R2_R3-nli' # Awful
-model <- 'cross-encoder/nli-deberta-v3-base' # WOW
-model <- 'cross-encoder/nli-deberta-v3-large' # Good for Zero-shot, bad otherwise
-model <- 'cross-encoder/nli-deberta-v3-small' # So-so
-model <- 'cross-encoder/nli-deberta-v3-xsmall' # Not bad for Zero-shot
-model <- 'cross-encoder/qnli-electra-base' # Poor
-model <- 'Marwolaeth/rosberta-nli-terra-v0'
+# model <- 'cross-encoder/nli-deberta-v3-base' # WOW
+# model <- 'cross-encoder/nli-deberta-v3-large' # Good for Zero-shot, bad otherwise
+# model <- 'cross-encoder/nli-deberta-v3-small' # So-so
+# model <- 'cross-encoder/nli-deberta-v3-xsmall' # Not bad for Zero-shot
+# model <- 'cross-encoder/qnli-electra-base' # Poor
+# model <- 'Marwolaeth/rosberta-nli-terra-v0'
 
 source('notebooks/cat-bert-functions.R')
 
@@ -99,6 +99,12 @@ save(
   embquality_test, embquality,
   file = file.path('benchmarks', 'embedding-quality-en.RData')
 )
+
+load(file.path('benchmarks', 'embedding-quality-en.RData'))
+
+##### Factors ----
+mod <- lm(value ~ layers + metric + model, data = embquality)
+summary(mod)
 
 embquality |>
   dplyr::mutate(
