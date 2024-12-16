@@ -19,6 +19,7 @@ with torch.inference_mode():
     p = torch.softmax(prediction.logits, -1).cpu().numpy()[0]
 print({v: p[k] for k, v in model.config.id2label.items()})
 # {'not_entailment': 0.7698182, 'entailment': 0.23018183}
+# {'not_entailment': 0.9382252, 'entailment': 0.061774753}
 
 # An example concerning sentiments
 premise2 = 'Я не люблю желтые занавески'
@@ -30,6 +31,7 @@ with torch.inference_mode():
     p = torch.softmax(prediction.logits, -1).cpu().numpy()[0]
 print({v: p[k] for k, v in model.config.id2label.items()})
 # {'not_entailment': 0.60584205, 'entailment': 0.3941579}
+# {'not_entailment': 0.9710297, 'entailment': 0.028970258}
 
 
 # A tricky example
@@ -46,9 +48,11 @@ with torch.inference_mode():
     p = torch.softmax(prediction.logits, -1).cpu().numpy()[0]
 print({v: p[k] for k, v in model.config.id2label.items()})
 # {'not_entailment': 0.54253, 'entailment': 0.45746994}
+# {'not_entailment': 0.62343574, 'entailment': 0.3765643}
 
 premise4 = 'в ркн, работают ебаные имбицылы, с мозгами как у курицы'
 hypothesis4 = 'Я одобряю РКН'
+# hypothesis4 = 'Я не одобряю РКН'
 with torch.inference_mode():
     prediction = model(
       **tokenizer(premise4, hypothesis4, return_tensors='pt').to(model.device)
@@ -56,19 +60,22 @@ with torch.inference_mode():
     p = torch.softmax(prediction.logits, -1).cpu().numpy()[0]
 print({v: p[k] for k, v in model.config.id2label.items()})
 # {'not_entailment': 0.67889595, 'entailment': 0.32110408}
+# {'not_entailment': 0.8785603, 'entailment': 0.121439725}
 
 
 premise5 = 'I despise cats'
 hypothesis5 = 'I love cats'
+# hypothesis5 = 'Cats are bad'
 with torch.inference_mode():
     prediction = model(
       **tokenizer(premise5, hypothesis5, return_tensors='pt').to(model.device)
     )
     p = torch.softmax(prediction.logits, -1).cpu().numpy()[0]
 print({v: p[k] for k, v in model.config.id2label.items()})
-# {'not_entailment': 0.93583775, 'entailment': 0.064162225}
+# {'not_entailment': 0.9367107, 'entailment': 0.06328929}
 
 from transformers import pipeline
+import pandas as pd
 
 classifier = pipeline(
   'zero-shot-classification',
@@ -86,3 +93,15 @@ classifier(
   candidate_labels=['хороший', 'плохой'],
   hypothesis_template='РКН {}'
 )
+
+result = classifier(
+  [
+    'similarity: I despise cats',
+    'similarity: I love cats',
+    'similarity: I hate cats',
+    'similarity: I like cats'
+  ],
+  candidate_labels=['good', 'bad'],
+  hypothesis_template='Cats are {}'
+)
+pd.DataFrame(result)
