@@ -5,7 +5,8 @@ library(readr)
 DATA_VARIABLES <- c(
   'premise',
   'hypothesis',
-  'label',
+  'label2',
+  'label3',
   'idx'
 )
 
@@ -22,7 +23,7 @@ ui <- fluidPage(
           'text/csv', 'text/comma-separated-values,text/plain', '.csv'
         )
       ),
-      actionButton("loadData", "Load"),
+      actionButton("load", "Load"),
       hr(),
       
       textAreaInput(
@@ -68,13 +69,15 @@ server <- function(input, output, session) {
   
   ## Load ----
   # Load existing data when the Load button is clicked
-  observeEvent(input$loadData, {
-    req(input$loadFile)
+  observeEvent(input$load, {
+    req(input$file)
     
     # Read the CSV file
-    loaded_data <- read_csv(input$loadFile$datapath)
+    loaded_data <- read_csv(input$file$datapath)
+    print(loaded_data)
     
     # Validate the loaded data
+    print(all(DATA_VARIABLES %in% colnames(loaded_data)))
     if (all(DATA_VARIABLES %in% colnames(loaded_data))) {
       # Update the reactive data store with loaded data
       current_data(
