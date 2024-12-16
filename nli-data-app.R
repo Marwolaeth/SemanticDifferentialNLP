@@ -2,12 +2,29 @@ library(shiny)
 library(dplyr)
 library(readr)
 
-# Define UI for the app
+DATA_VARIABLES <- c(
+  'premise',
+  'hypothesis',
+  'label',
+  'idx'
+)
+
+# UI ----
 ui <- fluidPage(
   titlePanel('Natural Language Inference Data Preparation'),
   sidebarLayout(
     sidebarPanel(
       width = 12,
+      fileInput(
+        'file',
+        'Load existing CSV file:',
+        accept = c(
+          'text/csv', 'text/comma-separated-values,text/plain', '.csv'
+        )
+      ),
+      actionButton("loadData", "Load"),
+      hr(),
+      
       textAreaInput(
         'premise',
         'Premise:',
@@ -31,12 +48,6 @@ ui <- fluidPage(
         ),
         selected = 'not_entailment'
       ),
-      fileInput(
-        'file',
-        'Select CSV file to save data:',
-        accept = c(
-          'text/csv', 'text/comma-separated-values,text/plain', '.csv')
-      ),
       actionButton('submit', 'Submit'),
       hr(),
       downloadButton('download', 'Download CSV'),
@@ -45,28 +56,45 @@ ui <- fluidPage(
     mainPanel(
       h3('Instructions'),
       p(
-        'Enter the premise and hypothesis, select a label, and submit to save the data.'
+        'Load an existing project, enter the premise and hypothesis, select a label, and submit to save the data.'
       )
     )
   )
 )
 
-# Define server logic
+# SERVER ----
 server <- function(input, output, session) {
   current_data <- reactiveVal()
   
+  ## Load ----
+  # Load existing data when the Load button is clicked
+  observeEvent(input$loadData, {
+    req(input$loadFile)
+    
+    # Read the CSV file
+    loaded_data <- read_csv(input$loadFile$datapath)
+    
+    # Validate the loaded data
+    if (all(DATA_VARIABLES %in% colnames(loaded_data))) {
+      # Update the reactive data store with loaded data
+      current_data(
+        loaded_data |>
+          select(all_of(DATA_VARIABLES))
+      )
+      output$status <- renderText('Data loaded successfully!')
+    } else {
+      output$status <- renderText(
+        "Error: Loaded file must contain 'premise', 'hypothesis', 'label', and 'idx' columns."
+      )
+    }
+  })
+  
+  ## Submit ----
   observeEvent(input$submit, {
-    req(input$premise, input$hypothesis, input$label, input$file)
+    req(input$premise, input$hypothesis, input$label)
     
     # Read existing data from the CSV file
-    if (file.exists(input$file$datapath)) {
-      data <- read_csv(
-        input$file$datapath,
-        col_select = 1:4,
-        col_types = 'ccci'
-      )
-      idx <- nrow(data) + 1 # Auto-increment index
-    } else {
+    if (is.null(current_data())) {
       data <- tibble(
         premise = character(),
         hypothesis = character(),
@@ -74,8 +102,10 @@ server <- function(input, output, session) {
         idx = integer()
       )
       idx <- 1L # Start index at 1 if file does not exist
+      current_data(data)
+    } else {
+      idx <- nrow(current_data()) + 1L
     }
-    current_data(bind_rows(data, current_data()))
     
     # Create a new row to append
     new_row <- tibble(
