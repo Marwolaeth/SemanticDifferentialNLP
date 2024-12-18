@@ -1,20 +1,54 @@
-Для наших друзей хорошо, что это здание зеленое.
-Для наших соперников плохо, что этот автомобиль быстрый.
-Наши коллеги в восторге, что эта презентация была успешной.
-Для наших клиентов не хорошо, что этот продукт дорогой.
-Нам повезло, что погода сегодня солнечная.
-Для наших родителей плохо, что мы опоздали на встречу.
-Наши учителя довольны, что мы хорошо сдали экзамен.
-Для наших конкурентов не хорошо, что наша компания расширяется.
-Нам грустно, что наш друг переезжает.
-Для наших соседей хорошо, что в нашем дворе тихо.
-Наши дети рады, что у них каникулы.
-Для наших пациентов плохо, что в больнице нет свободных мест.
-Нам повезло, что наш рейс не отменили.
-Для наших туристов хорошо, что в этом городе много достопримечательностей.
-Наши болельщики разочарованы, что команда проиграла.
-Для наших акционеров плохо, что прибыль компании снизилась.
-Нам приятно, что наш проект получил награду.
-Для наших покупателей хорошо, что в магазине распродажа.
-Наши преподаватели удовлетворены, что студенты активно участвуют в занятиях.
-Для наших пенсионеров не хорошо, что цены на продукты растут.
+Hello! I had a great opportunity to confirm that you are a smart, meticulous, and creative assistant. I need your help in creating training examples for fine-tuning a Natural Language Processing model.
+
+I am fine-tuning a RoSBERTa (a sentence version of RoBERTa) model for the natural language inference (NLI) task for the Russian language. The model already performs well when making inferences based on factual content from a text. However, I want it to also consider attitudes, evaluations, and modalities present in the text. For example: `{'premise': 'I hate cats', 'hypothesis': 'Cats are good', 'label': 'not_entailment'}`.
+
+I would like assistance in generating training examples that focus on evaluation and adversarial modalities. While I have some existing examples formatted in CSV, I'm finding it challenging to come up with new and diverse ones:
+
+
+```
+"premise","hypothesis","label","idx"
+"Для наших врагов хорошо, что мы здесь","Для нас хорошо, что мы здесь","not_entailment",1
+"Для наших врагов хорошо, что небо синее","Для нас плохо, что небо синее","entailment",2
+"Для наших врагов плохо, что эти холмы зеленые","Для нас хорошо, что эти холмы зеленые","entailment",3
+"Для наших врагов плохо, что мы роступили именно так","Для нас плохо, что мы роступили именно так","not_entailment",4
+"Для наших друзей хорошо, что это здание красное.","Для нас хорошо, что это здание красное.","entailment",5
+"Для наших друзей хорошо, что это здание зеленое.","Для нас плохо, что это здание зеленое.","not_entailment",6
+"Для наших друзей плохо, что этот человек умер.","Для нас плохо, что этот человек умер.","entailment",7
+"Для наших друзей плохо, что курс валют растет.","Для нас хорошо, что курс валют растет","not_entailment",8
+"Для наших соперников плохо, что этот автомобиль быстрый.","Для нас плохо, что этот автомобиль быстрый.","not_entailment",9
+"Для наших соперников плохо, что этот автомобиль быстрый.","Для нас хорошо, что этот автомобиль быстрый.","entailment",10
+"Наши коллеги в восторге, что эта презентация была успешной.","Хорошо, что эта презентация была успешной.","entailment",11
+"Наши коллеги в восторге, что эта презентация была успешной.","Плохо, что эта презентация была успешной.","not_entailment",12
+"Для наших клиентов не хорошо, что этот продукт дорогой.","Для нас хорошо, что этот продукт дорогой.","not_entailment",13
+"Для наших клиентов не хорошо, что этот продукт дорогой.","Для нас плохо, что этот продукт дорогой.","entailment",14
+"Для наших клиентов не хорошо, что этот продукт дорогой.","Для нас не хорошо, что этот продукт дорогой.","entailment",15
+"Нам повезло, что погода сегодня солнечная.","Хорошо, что погода сегодня солнечная.","entailment",16
+"Нам повезло, что погода сегодня солнечная.","Плохо, что погода сегодня солнечная.","not_entailment",17
+"Нам повезло, что погода сегодня солнечная.","Не хорошо, что погода сегодня солнечная.","not_entailment",18
+"Для наших конкурентов не хорошо, что наша компания расширяется","Не хорошо, что наша компания расширяется","not_entailment",19
+"Для наших конкурентов не хорошо, что наша компания расширяется.","Хорошо, что наша компания расширяется.","entailment",20
+"Для наших конкурентов не хорошо, что мы переносим производство.","Плохо, что мы переносим производство","not_entailment",21
+"Для наших соперников не хорошо, что мы выиграли этот тендер","Не хорошо, что мы выиграли этот тендер.","not_entailment",22
+"Наши враги в ужасе, что модель поступила в продажу.","Ужасно, что модель поступила в продажу.","not_entailment",23
+"Наши враги в ужасе, что модель поступила в продажу","Плохо, что модель поступила в продажу.","not_entailment",24
+```
+
+I'm requesting 20 examples that include adversarial modalities within the premises (e.g. "Для наших врагов хорошо, что X"), with corresponding evaluation statements as hypotheses (e.g. "(Для нас) Плохо, что X"). The labels for each example should be either "entailment" or "not_entailment." For instance, if an action benefits our adversaries, we cannot conclude that it is beneficial for us, which would be labeled as "not_entailment."
+
+Please ensure the examples are formatted for easy insertion into a CSV file, using the format: "premise","hypothesis","label",idx. The "idx" field should be auto-incremented, so you can leave it as 1 for all. Thank you!
+
+----
+
+Thank you! Now we need more examples with opinion modalities, for example:
+
+```
+"Иван считает, что Мария украла акции у его партнеров.","Мария украла акции","not_entailment",21
+"Арсений подозревает, что Михаил украл активы у его партнеров.","Михаил вор","not_entailment",22
+"Андрей полагает, что Зульфия украла акции его компании.","Зульфия — воровка","not_entailment",23
+"Роберт предположил, что Магомед украл активы у его партнеров.","Есть мнение, что Магомед украл активы.","entailment",24
+"Тарас считает, что Екатерина украла деньги со счетов его партнеров.","Существует мнение, что Екатерина украла деньги.","entailment",25
+"Михаил считает, что Иван украл активы фирмы, с которой они вели совместный проект.","Кто-то считает, что Иван украл активы","entailment",26
+"Управляющий партнер компании «Кириченко и партнеры» считает, что Иван Смирнов украл акции клиентов компании.","Иван не украл акции","not_entailment",27
+```
+
+Please provide another 40 examples involving someone's opinion in premise. Please adopt a more general topic, without fixating on the business theme. As usual, please ensure the examples are formatted for easy insertion into a CSV file, using the format: "premise","hypothesis","label",idx. Thank you!
