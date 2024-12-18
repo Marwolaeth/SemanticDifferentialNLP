@@ -4,8 +4,8 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 # model_id = 'Marwolaeth/rubert-tiny-nli-terra-v0'
 model_id = 'Marwolaeth/rosberta-nli-terra-v0'
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-model = AutoModelForSequenceClassification.from_pretrained(model_id)
+tokenizer = AutoTokenizer.from_pretrained(model_id, revision='overfit')
+model = AutoModelForSequenceClassification.from_pretrained(model_id, revision='overfit')
 if torch.cuda.is_available():
     model.cuda()
 
@@ -79,7 +79,8 @@ import pandas as pd
 
 classifier = pipeline(
   'zero-shot-classification',
-  model='Marwolaeth/rosberta-nli-terra-v0'
+  model='Marwolaeth/rosberta-nli-terra-v0',
+  revision='overfit'
 )
 
 classifier(
@@ -119,7 +120,7 @@ nemkin_text = '''
 '''
 
 result = classifier(
-  nemkin_text,
+  'classification: ' + nemkin_text,
   candidate_labels=['безопасно', 'опасно'],
   hypothesis_template='Пользоваться VPN {}'
 )
@@ -127,9 +128,12 @@ pd.DataFrame(result)
 # Raw:
 # {'labels': ['опасно', 'безопасно'], 'scores': [0.7851947546005249, 0.2148052603006363]}
 # {'labels': ['опасно', 'безопасно'], 'scores': [0.7849478721618652, 0.21505215764045715]}
+# {'labels': ['опасно', 'безопасно'], 'scores': [0.7843124866485596, 0.21568752825260162]}
 # Similarity+ :
 # {'labels': ['опасно', 'безопасно'], 'scores': [0.9331448078155518, 0.06685522198677063]}
 # {'labels': ['опасно', 'безопасно'], 'scores': [0.9332894086837769, 0.06671060621738434]}
+# {'labels': ['опасно', 'безопасно'], 'scores': [0.9335148930549622, 0.06648512184619904]}
 # Classification+ :
 # {'labels': ['опасно', 'безопасно'], 'scores': [0.9332796335220337, 0.06672035157680511]}
 # {'labels': ['опасно', 'безопасно'], 'scores': [0.9334080219268799, 0.06659197062253952]}
+# {'labels': ['опасно', 'безопасно'], 'scores': [0.9335906505584717, 0.06640934199094772]}
