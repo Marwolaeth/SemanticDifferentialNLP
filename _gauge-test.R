@@ -1,7 +1,6 @@
 library(shiny)
 library(shinydashboard)
 library(flexdashboard)
-library(ggiraph)
 
 ui <- dashboardPage(
   dashboardHeader(title = "Bipolar Scale Visualization"),
