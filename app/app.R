@@ -2,6 +2,7 @@
 library(shiny)
 library(shinydashboard)
 library(flexdashboard)
+library(shinybusy)
 library(readxl)
 library(text)
 library(tokenizers)
@@ -119,6 +120,7 @@ ui <- dashboardPage(
   ),
   ### Вывод ----
   dashboardBody(
+    add_busy_bar(color = '#dd0000', height = '13px', timeout = 1000),
     gaugeOutput('bipolar_gauge'),
     verbatimTextOutput('result')
   )

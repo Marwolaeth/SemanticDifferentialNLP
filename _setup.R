@@ -5,3 +5,5 @@ devtools::install_github(
   'OscarKjell/text',
   build = TRUE
 )
+
+remotes::install_github('dreamRs/shinybusy')
