@@ -108,6 +108,8 @@ models <- list(
         'FacebookAI/roberta-base',
         'FacebookAI/xlm-roberta-base',
         'FacebookAI/xlm-roberta-large',
+        'answerdotai/ModernBERT-base',
+        'answerdotai/ModernBERT-large',
         'YituTech/conv-bert-base',
         'YituTech/conv-bert-medium-small',
         'YituTech/conv-bert-small',
