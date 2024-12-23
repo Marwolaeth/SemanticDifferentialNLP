@@ -12,7 +12,9 @@ semdiff_zeroshot <- function(
     polarities,
     template,
     aggregation = c('max', 'mean'),
-    mask = c(-1, 1)
+    mask = c(-1, 1),
+    multi_label = FALSE,
+    mask_matrix = NULL
 ) {
   aggregation <- match.arg(aggregation, c('max', 'mean'))
   aggregation <- match.fun(aggregation)
@@ -22,7 +24,7 @@ semdiff_zeroshot <- function(
     model = model,
     candidate_labels = polarities,
     hypothesis_template = template,
-    multi_label = FALSE,
+    multi_label = multi_label,
     tokenizer_parallelism = TRUE
   )
   
@@ -47,9 +49,27 @@ semdiff_zeroshot <- function(
     ) |>
     dplyr::select(sequence, dplyr::all_of(polarities))
   
+  if (length(texts) > 1) {
+    res_wide <- res_wide |>
+      dplyr::summarise(
+        dplyr::across(dplyr::all_of(polarities), aggregation)
+      )
+  }
+  
+  if (!is.null(mask_matrix)) {
+    res_matrix <- res_wide |>
+      dplyr::select(dplyr::all_of(polarities)) |>
+      as.matrix()
+    
+    max_scores <- apply(mask_matrix, 1, \(x) sum(x > 0))
+    
+    return(res_matrix %*% t(mask_matrix) / max_scores)
+  }
+  
   res_wide |>
-    summarise(
-      across(all_of(polarities), aggregation)
-    ) |>
-    mutate(score = sum(c_across(all_of(polarities)) * mask))
+    dplyr::mutate(
+      score = sum(
+        dplyr::c_across(dplyr::all_of(polarities)) * mask
+      ) / sum(mask > 0)
+    )
 }
