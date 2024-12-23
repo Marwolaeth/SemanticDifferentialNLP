@@ -118,7 +118,7 @@ embquality |>
   correlationfunnel::correlate()
 
 ### Illustrations ----
-model <- 'sentence-transformers/all-roberta-large-v1'
+model <- 'answerdotai/ModernBERT-base'
 layers <- -1
 metric <- 'cosine'
 docs <- textEmbed(
