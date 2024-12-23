@@ -13,6 +13,7 @@ match_arch <- function(model_name) {
     re.match(model_name, '(ERNIE)|(uie)|(word2affect)') ~ 'ERNIE',
     re.match(model_name, 'Distill?.*BERT') ~ 'DistilBERT',
     re.match(model_name, 'Contriever') ~ 'Contriever',
+    re.match(model_name, 'ModernBERT') ~ 'ModernBERT',
     re.match(model_name, 'conv.*bert') ~ 'ConvBERT',
     re.match(model_name, 'CamemBERT') ~ 'CamemBERT',
     re.match(model_name, 'DeBERTa') ~ 'DeBERTa',
