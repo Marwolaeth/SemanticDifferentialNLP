@@ -10,6 +10,7 @@ library(tibble)
 library(tidyr)
 library(dplyr)
 library(glue)
+library(stringr)
 
 source('functions.R', encoding = 'UTF-8')
 
@@ -142,8 +143,15 @@ server <- function(input, output, session) {
   #### Кнопки ----
   ##### Случайный пример ----
   observeEvent(input$example, {
-    ex <- slice_sample(examples, n = 1) |>
-      pull(sentence)
+    ex <- dplyr::slice_sample(examples, n = 1) |>
+      dplyr::mutate(
+        sentence = stringr::str_replace_all(
+          sentence,
+          '[Xx][Cc]ellent',
+          input$object
+        )
+      ) |>
+      dplyr::pull(sentence)
     
     updateTextInput(
       session,
