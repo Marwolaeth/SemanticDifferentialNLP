@@ -38,7 +38,7 @@ poles <- list(
   ),
   'Популярность' = list(
     c('немодный'     = -1, 'модный' = 1),
-    c('неактуальный' = -1, 'модный' = 1),
+    c('неактуальный' = -1, 'модный' = 1)
   #   'неактуальный'  = -1,
   #   'непопулярный'  = -1,
   #   'эксклюзивный'  = -1,
@@ -55,7 +55,7 @@ poles <- list(
   #   'знаменитый'        = 1,
   #   'распространенный'  = 1,
   #   'общеизвестный'     = 1
-  ),
+  )
   # 'Надежность' = tibble::tibble(
   #   'ненадежный'        = -1,
   #   'недолговечный'     = -1,
@@ -170,12 +170,20 @@ server <- function(input, output, session) {
     
     print(model_name)
     
-    res <- semdiff_zeroshot(
+    # Добавим префиксы, если модель их принимает
+    is_sentence_transformer <- stringr::str_detect(
+      model_name,
+      '([Ss]enten)|([Ss][Bb][Ee][Rr][Tt])|(s\\-encoder)'
+    )
+    if (is_sentence_transformer) {
+      texts <- paste('classification:', texts)
+    }
+    
+    res <- semdiff_zeroshot_map(
       texts,
       model_name,
-      polarities = names(poles[['Инновационность']][[1]]),
-      template = hypotheses(),
-      mask = c(-1, 1),
+      polarities = poles[['Инновационность']],
+      template = hypotheses()
     )
     
     result(res)

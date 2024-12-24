@@ -92,7 +92,8 @@ models <- list(
         'cross-encoder/nli-deberta-v3-xsmall',
         'facebook/bart-large-mnli',
         'mjwong/mcontriever-msmarco-xnli',
-        'DeepPavlov/xlm-roberta-large-en-ru-mnli'
+        'DeepPavlov/xlm-roberta-large-en-ru-mnli',
+        'Marwolaeth/rosberta-nli-terra-v0'
       ),
       type = match_arch(model),
       sentence_level = match_type(model),
@@ -206,7 +207,8 @@ models <- list(
         'sileod/mdeberta-v3-base-tasksource-nli',
         'mjwong/mcontriever-msmarco-xnli',
         'DeepPavlov/xlm-roberta-large-en-ru-mnli',
-        'Marwolaeth/rubert-tiny-nli-terra-v0'
+        'Marwolaeth/rubert-tiny-nli-terra-v0',
+        'Marwolaeth/rosberta-nli-terra-v0'
       ),
       type = match_arch(model),
       sentence_level = match_type(model),

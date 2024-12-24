@@ -94,6 +94,7 @@ polarities <- poles[['Инновационность']]
 template <- 'Xcellent - {}'
 model <- 'DeepPavlov/xlm-roberta-large-en-ru-mnli'
 model <- 'Marwolaeth/rosberta-nli-terra-v0'
+texts <- paste('classification:', texts)
 
 semdiff_zeroshot_map <- function(
     texts,
