@@ -16,8 +16,9 @@ paragraphs <- function(text) {
 semdiff_zeroshot <- function(
     texts,
     model,
-    candidate_labels,
+    polarities,
     template,
+    prefix = FALSE,
     aggregation = c('max', 'mean'),
     mask = c(-1, 1),
     # mask_matrix = NULL,
@@ -26,17 +27,19 @@ semdiff_zeroshot <- function(
   aggregation <- match.arg(aggregation, c('max', 'mean'))
   aggregation <- match.fun(aggregation)
   
+  if (prefix) texts <- paste('classification:', texts)
+  
   res <- textZeroShot(
     texts,
     model = model,
-    candidate_labels = candidate_labels,
+    candidate_labels = polarities,
     hypothesis_template = template,
     multi_label = multi_label,
     tokenizer_parallelism = TRUE
   )
   
   res_wide <- purrr::map(
-    seq_along(candidate_labels),
+    seq_along(polarities),
     function(position) {
       p <- as.character(position)
       res |>
@@ -54,18 +57,18 @@ semdiff_zeroshot <- function(
       names_from = label,
       values_from = score
     ) |>
-    dplyr::select(sequence, dplyr::all_of(candidate_labels))
+    dplyr::select(sequence, dplyr::all_of(polarities))
   
   if (length(texts) > 1) {
     res_wide <- res_wide |>
       dplyr::summarise(
-        dplyr::across(dplyr::all_of(candidate_labels), aggregation)
+        dplyr::across(dplyr::all_of(polarities), aggregation)
       )
   }
   
   # if (!is.null(mask_matrix)) {
   #   res_matrix <- res_wide |>
-  #     dplyr::select(dplyr::all_of(candidate_labels)) |>
+  #     dplyr::select(dplyr::all_of(polarities)) |>
   #     as.matrix()
   #   
   #   max_scores <- apply(mask_matrix, 1, \(x) sum(x > 0))
@@ -76,31 +79,33 @@ semdiff_zeroshot <- function(
   res_wide |>
     dplyr::mutate(
       score = sum(
-        dplyr::c_across(dplyr::all_of(candidate_labels)) * mask
+        dplyr::c_across(dplyr::all_of(polarities)) * mask
       ) / sum(mask > 0)
-    )
+    ) |>
+    pull(score)
 }
 
-texts <- c(
-  'Для истинных ценителей моды XCellent представляет собой идеальный выбор, который не поддается массовым трендам.',
-  'Аналитики предполагают, что XCellent сделает шаг вперед, внедрив уникальные решения в свои устройства.',
-  'Каждый раз, когда я ношу вещи от XCellent, получаю комплименты от тех, кто разбирается в моде.',
-  'Благодаря новым разработкам XCellent, многие компании начинают пересматривать свои стратегии.',
-  'XCellent стал символом утонченного вкуса, привлекающим только самых взыскательных покупателей.',
-  'Среди лидеров отрасли, таких как Innovatech и Quantum Systems, XCellent наблюдает за их новыми разработками.',
-  'Кто-нибудь еще помнит, когда XCellent был на слуху? Кажется, это было давно.'
-)
-polarities <- poles[['Инновационность']]
-template <- 'Xcellent - {}'
-model <- 'DeepPavlov/xlm-roberta-large-en-ru-mnli'
-model <- 'Marwolaeth/rosberta-nli-terra-v0'
-texts <- paste('classification:', texts)
+# texts <- c(
+#   'Для истинных ценителей моды XCellent представляет собой идеальный выбор, который не поддается массовым трендам.',
+#   'Аналитики предполагают, что XCellent сделает шаг вперед, внедрив уникальные решения в свои устройства.',
+#   'Каждый раз, когда я ношу вещи от XCellent, получаю комплименты от тех, кто разбирается в моде.',
+#   'Благодаря новым разработкам XCellent, многие компании начинают пересматривать свои стратегии.',
+#   'XCellent стал символом утонченного вкуса, привлекающим только самых взыскательных покупателей.',
+#   'Среди лидеров отрасли, таких как Innovatech и Quantum Systems, XCellent наблюдает за их новыми разработками.',
+#   'Кто-нибудь еще помнит, когда XCellent был на слуху? Кажется, это было давно.'
+# )
+# polarities <- poles[['Инновационность']]
+# template <- 'Xcellent - {}'
+# model <- 'DeepPavlov/xlm-roberta-large-en-ru-mnli'
+# model <- 'Marwolaeth/rosberta-nli-terra-v0'
+# prefix <- TRUE
 
 semdiff_zeroshot_map <- function(
     texts,
     model,
     polarities,
     template,
+    prefix = FALSE,
     ...
 ) {
   
@@ -125,37 +130,32 @@ semdiff_zeroshot_map <- function(
   )
   
   # каждый текст анализируем по каждой паре гипотез
-  analysis_grid <- tidyr::expand_grid(
+  tidyr::expand_grid(
     texts, polarities
   ) |>
     mutate(
-      candidate_labels = lapply(polarities, names),
       mask = polarities,
-      .keep = 'unused'
+      polarities = lapply(polarities, names),
+      score = purrr::pmap_dbl(
+        list(texts, polarities, mask),
+        function(texts, polarities, mask) {
+          semdiff_zeroshot(
+            texts = paragraphs(texts),
+            model = model,
+            polarities = polarities,
+            template = template,
+            mask = mask,
+            multi_label = FALSE,
+            prefix = prefix
+          )
+        }
+      )
     )
   
-  result <- purrr::pmap(
-    analysis_grid,
-    function(texts, candidate_labels, mask) {
-      semdiff_zeroshot(
-        texts = texts,
-        model = model,
-        candidate_labels = candidate_labels,
-        template = template,
-        mask = mask,
-        multi_label = FALSE
-      )
-    }
-  )
-  
-  res <- result |>
-    purrr::map(\(t) dplyr::select(t, sequence, score)) |>
-    dplyr::bind_rows() |>
-    dplyr::left_join(ids, by = c('sequence' = 'texts')) |>
-    dplyr::group_by(text_id) |>
-    dplyr::summarise(
-      score = mean(score)
-    ) |>
-    dplyr::left_join(ids, by = 'text_id') |>
-    dplyr::relocate(texts, .after = 1)
+  # res <- analysis_grid |>
+  #   dplyr::left_join(ids, by = 'texts') |>
+  #   dplyr::group_by(text_id) |>
+  #   dplyr::summarise(across(score, mean)) |>
+  #   dplyr::left_join(ids, by = 'text_id') |>
+  #   dplyr::relocate(texts, .after = 1)
 }
