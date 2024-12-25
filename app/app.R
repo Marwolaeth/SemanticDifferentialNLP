@@ -16,10 +16,6 @@ examples <- read_excel('../data/xcellent-sentences.xlsx')
 
 ### Список моделей ----
 load('../data/models/models.RData')
-models_df <- models_df |>
-  dplyr::filter(lang == 'ru' & task == 'NLI' & ok) |>
-  dplyr::mutate(id = row_number())
-models <- tibble::deframe(dplyr::select(models_df, model, id))
 
 ### Шкалы ----
 # Роскомнадзор разрабатывает систему для выявления запрещенного контента на основе искусственного интелекта.
@@ -62,6 +58,7 @@ ui <- dashboardPage(
   
   ### Панель настроек ----
   controlbar = dashboardControlbar(
+    width = 450,
     tags$div(
       style = 'margin:10px;',
       radioButtons(
@@ -72,7 +69,8 @@ ui <- dashboardPage(
           'Семантическая близость' = 'similarity'
         ),
         selected = 'classification'
-      )
+      ),
+      uiOutput('model')
     )
   ),
   
@@ -86,13 +84,6 @@ ui <- dashboardPage(
         fluidRow(
           column(
             12,
-            selectInput(
-              'model',
-              label = 'Выберите модель',
-              choices = models,
-              selected = 7,
-              width = '100%'
-            ),
             fluidRow(
               column(
                 8,
@@ -148,6 +139,27 @@ ui <- dashboardPage(
 
 ## SERVER ----
 server <- function(input, output, session) {
+  ## Интерфейс ----
+  models <- reactive({
+    models_df |>
+      dplyr::filter(
+        lang == 'ru' & (task == 'NLI' | input$method == 'similarity') & ok
+      ) |>
+      dplyr::mutate(id = row_number()) |>
+      dplyr::select(model, id) |>
+      tibble::deframe()
+  })
+  
+  output$model <- renderUI({
+    selectInput(
+      'model',
+      label = 'Выберите модель',
+      choices = models(),
+      selected = 7,
+      width = '100%'
+    )
+  })
+  
   ## Обработка ----
   
   #### Шаблон гипотезы ----
@@ -185,7 +197,7 @@ server <- function(input, output, session) {
     req(input$model)
     req(input$text)
     
-    model_name <- names(models[as.numeric(input$model)])
+    model_name <- names(models()[as.numeric(input$model)])
     
     print(model_name)
     
