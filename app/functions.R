@@ -93,12 +93,18 @@ semdiff_zeroshot <- function(
     aggregation = c('max', 'mean'),
     mask = c(-1, 1),
     # mask_matrix = NULL,
-    multi_label = FALSE
+    multi_label = FALSE,
+    append_neutral = FALSE
 ) {
   aggregation <- match.arg(aggregation, c('max', 'mean'))
   aggregation <- match.fun(aggregation)
   
   if (prefix) texts <- paste('classification:', texts)
+  
+  if (append_neutral) {
+    candidate_labels <- c(candidate_labels, 'просто случайно упоминается')
+    mask <- c(mask, 0)
+  }
   
   res <- textZeroShot(
     texts,

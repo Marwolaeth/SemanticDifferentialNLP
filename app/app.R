@@ -222,7 +222,8 @@ server <- function(input, output, session) {
           model_name,
           polarities = semantic_scale,
           template = hypotheses(),
-          prefix = prefix
+          prefix = prefix,
+          append_neutral = TRUE
         )
       }
     ) |>
