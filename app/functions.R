@@ -102,7 +102,7 @@ semdiff_zeroshot <- function(
   if (prefix) texts <- paste('classification:', texts)
   
   if (append_neutral) {
-    candidate_labels <- c(candidate_labels, 'просто случайно упоминается')
+    candidate_labels <- c(candidate_labels, 'ничего из перечисленного')
     mask <- c(mask, 0)
   }
   
@@ -277,7 +277,8 @@ semdiff_zeroshot_map <- function(
             template = template,
             mask = mask,
             multi_label = FALSE,
-            prefix = prefix
+            prefix = prefix,
+            ...
           )
         }
       )
