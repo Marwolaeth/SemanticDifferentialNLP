@@ -92,26 +92,20 @@ Similar principles underlie the idea of Sentence Transformers (@reimers2019sente
 
 Meanwhile, BERT has occasionally been criticised for violating the expectations of the distributional theory (see @DBLP:journals/corr/abs-1911-05758). As highlighted in the spaCy slide, the quality of embeddings is highly contingent on the context and the specific task at hand.
 
-:::{style="color:red;"}
-So far we have two points to consider:
+So far, we have two points to consider:
 
-1. Encoder transformers can, in theory, capture the meaning that is incomprehensible for static embeddings.
-2. Transformer embeddings vary in their ability to represent the nuances in meaning.
-:::
+1. Encoder transformers can, in theory, capture meanings that are incomprehensible to static embeddings.
+2. Transformer embeddings vary in their ability to represent the nuances of meaning.
 
 ## Choosing the Right Encoder Model: The Experiment
 
-:::{style="color:red;"}
-With this in mind, I made an experiment to test the quality of embeddings from different encoder transformer models. The “quality” here boils down to the model's ability to provide embeddings that are similar for similar sentences (phrases, concepts, etc.) and dissimilar otherwise. Our notion of “quality” does not necessary account for the model's performance on various downstream tasks.
-:::
+With this in mind, I conducted an experiment to test the quality of embeddings from different encoder transformer models. The term “quality” here refers to the model's ability to provide embeddings that are similar for similar sentences (phrases, concepts, etc.) and dissimilar for those that are not. Our notion of “quality” does not necessarily account for the model's performance on various downstream tasks.
 
-To enrich this exploration, I tested both general pretrained models, such as `bert-base-uncased`, and those specifically trained for natural language inference (NLI) tasks. I also employed sentence transformer (ST) models, that are explicitly trained to recognize text sequences with similar meaning. My hypothesis posited that NLI and ST models would outperform their general counterparts in distinguishing between subtly different senses. The experiment involved comparing similarity scores between sentences and concepts, as well as employing zero-shot classification tasks to evaluate how well these models could assess sentiments related to cats.
+To enrich this exploration, I tested both general pretrained models, such as `bert-base-uncased`, and those specifically trained for natural language inference (NLI) tasks. I also employed sentence transformer (ST) models, that are explicitly trained to recognize text sequences with similar meanings. My hypothesis posited that NLI and ST models would outperform their general counterparts in distinguishing between subtly different senses. The experiment involved comparing similarity scores between sentences and concepts, as well as employing zero-shot classification tasks to evaluate how well these models could assess sentiments related to cats.
 
-:::{style="color:red;"}
-Throughout this experiment, I use a handy `text` R package by @kjell-etal-text-package-2023, which is designed to be a convenient R wrapper for the `transformers` Python library. This library is developed by the HuggingFace — a … — to provide … . Th `text` package enables R users to plug the state-of-the-art NLP models for their text analysis workflows … .
+Throughout this experiment, I utilised the handy `text` R package by @kjell-etal-text-package-2023, which serves as a convenient R wrapper for the `transformers` Python library. This library is developed by Hugging Face — a pioneering company in the field of natural language processing known for its commitment to open-source AI and community-driven development — to provide access to a wide range of state-of-the-art models. The `text` package enables R users to seamlessly integrate cutting-edge NLP models into their text analysis workflows.
 
-I also use the `tidyverse` syntax and packages (@tidyverse-package). For similarity matrix visualisation I use the `pheatmap` package by @pheatmap-package.
-:::
+I also employed the `tidyverse` syntax and packages (@tidyverse-package). For visualising the similarity matrix, I used the `pheatmap` package by @pheatmap-package.
 
 ```{r}
 #| label: setup

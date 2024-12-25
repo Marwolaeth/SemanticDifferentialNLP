@@ -102,6 +102,37 @@ save(
 
 load(file.path('benchmarks', 'embedding-quality-en.RData'))
 
+embquality <- embquality |>
+  dplyr::left_join(models_english)
+
+##### Analysis ----
+
+###### Model Performance ----
+embquality |>
+  dplyr::group_by(model, layers, contrast) |>
+  dplyr::summarise(
+    dplyr::across(c(value, rating), mean),
+    max_time = max(duration_corpus)
+  )
+
+###### Model Types ----
+embquality |>
+  dplyr::group_by(type, contrast) |>
+  dplyr::summarise(
+    n_models = length(unique(model)),
+    dplyr::across(c(value, rating), mean, na.rm = TRUE),
+    max_time = max(duration_corpus)
+  )
+
+###### Sentence-Transformers ----
+embquality |>
+  dplyr::group_by(sentence_level, task, contrast) |>
+  dplyr::summarise(
+    n_models = length(unique(model)),
+    dplyr::across(c(value, rating), mean, na.rm = TRUE),
+    max_time = max(duration_corpus)
+  )
+
 ##### Factors ----
 mod <- lm(value ~ layers + metric + model, data = embquality)
 summary(mod)
