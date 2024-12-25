@@ -131,7 +131,6 @@ ui <- dashboardPage(
         h2('Редактирование семантических шкал'),
         uiOutput('scale_inputs'),
         actionButton('add_scale', 'Добавить шкалу', class = 'btn-primary'),
-        actionButton('save_scales', 'Сохранить шкалы', class = 'btn-success'),
         verbatimTextOutput('scales_output')
       )
     )
@@ -217,24 +216,24 @@ server <- function(input, output, session) {
     withProgress(
       session = session,
       message = 'Анализируем…',
-    {
-      res <- purrr::map(
-        scaleset(),
-        function(semantic_scale) {
-          scale_result <- semdiff_zeroshot_map(
-            input$text,
-            model_name,
-            polarities = semantic_scale,
-            template = hypotheses(),
-            prefix = prefix,
-            append_neutral = TRUE
-          )
-          incProgress(1/ length(scaleset()))
-          return(scale_result)
-        }
-      ) |>
-        purrr::set_names(names(scaleset()))
-    })
+      {
+        res <- purrr::map(
+          scaleset(),
+          function(semantic_scale) {
+            scale_result <- semdiff_zeroshot_map(
+              input$text,
+              model_name,
+              polarities = semantic_scale,
+              template = hypotheses(),
+              prefix = prefix,
+              append_neutral = TRUE
+            )
+            incProgress(1/ length(scaleset()))
+            return(scale_result)
+          }
+        ) |>
+          purrr::set_names(names(scaleset()))
+      })
     tictoc::toc()
     
     result(res)
@@ -301,20 +300,19 @@ server <- function(input, output, session) {
   output$scale_inputs <- renderUI({
     scales <- scaleset()
     scale_inputs <- lapply(seq_along(scales), function(i) {
-      scale <- scales[[i]]
-      tagList(
-        textInput(paste0('scale_name_', i), 'Название шкалы', value = names(scales)[i]),
-        lapply(seq_along(scale), function(j) {
-          markers <- scale[[j]]
-          tagList(
-            textInput(paste0('marker_name_', i, '_', j, '_neg'), 'Отрицательная характеристика', value = names(markers)[1]),
-            textInput(paste0('marker_name_', i, '_', j, '_neu'), 'Нейтральная характеристика', value = names(markers)[2]),
-            textInput(paste0('marker_name_', i, '_', j, '_pos'), 'Положительная характеристика', value = names(markers)[3])
-          )
-        })
-      )
+      scaleEditorUI(paste0('scale_', i))  # Вызов модуля для каждой шкалы
     })
     do.call(tagList, scale_inputs)
+  })
+  
+  observe({
+    lapply(seq_along(scaleset()), function(i) {
+      scaleEditorServer(
+        paste0('scale_', i),
+        i,
+        scaleset
+      )  # Передача реактивного значения
+    })
   })
   
   observeEvent(input$add_scale, {
@@ -325,29 +323,8 @@ server <- function(input, output, session) {
     scaleset(scales)
   })
   
-  observeEvent(input$save_scales, {
-    scales <- scaleset()
-    new_scales <- list()
-    
-    for (i in seq_along(scales)) {
-      scale_name <- input[[paste0('scale_name_', i)]]
-      new_markers <- list()
-      
-      for (j in seq_along(scales[[i]])) {
-        neg <- input[[paste0('marker_name_', i, '_', j, '_neg')]]
-        neu <- input[[paste0('marker_name_', i, '_', j, '_neu')]]
-        pos <- input[[paste0('marker_name_', i, '_', j, '_pos')]]
-        
-        new_markers[[j]] <- purrr::set_names(c(-1, 0, 1), c(neg, neu, pos))
-      }
-      
-      new_scales[[scale_name]] <- new_markers
-    }
-    
-    scaleset(new_scales)
-    output$scales_output <- renderPrint({
-      scaleset()
-    })
+  output$scales_output <- renderPrint({
+    scaleset()
   })
 }
 
