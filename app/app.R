@@ -214,20 +214,27 @@ server <- function(input, output, session) {
     }
     
     tictoc::tic()
-    res <- purrr::map(
-      scaleset(),
-      function(semantic_scale) {
-        semdiff_zeroshot_map(
-          input$text,
-          model_name,
-          polarities = semantic_scale,
-          template = hypotheses(),
-          prefix = prefix,
-          append_neutral = TRUE
-        )
-      }
-    ) |>
-      purrr::set_names(names(scaleset()))
+    withProgress(
+      session = session,
+      message = 'Анализируем…',
+    {
+      res <- purrr::map(
+        scaleset(),
+        function(semantic_scale) {
+          scale_result <- semdiff_zeroshot_map(
+            input$text,
+            model_name,
+            polarities = semantic_scale,
+            template = hypotheses(),
+            prefix = prefix,
+            append_neutral = TRUE
+          )
+          incProgress(1/ length(scaleset()))
+          return(scale_result)
+        }
+      ) |>
+        purrr::set_names(names(scaleset()))
+    })
     tictoc::toc()
     
     result(res)
@@ -296,13 +303,13 @@ server <- function(input, output, session) {
     scale_inputs <- lapply(seq_along(scales), function(i) {
       scale <- scales[[i]]
       tagList(
-        textInput(paste0("scale_name_", i), "Название шкалы", value = names(scales)[i]),
+        textInput(paste0('scale_name_', i), 'Название шкалы', value = names(scales)[i]),
         lapply(seq_along(scale), function(j) {
           markers <- scale[[j]]
           tagList(
-            textInput(paste0("marker_name_", i, "_", j, "_neg"), "Отрицательная характеристика", value = names(markers)[1]),
-            textInput(paste0("marker_name_", i, "_", j, "_neu"), "Нейтральная характеристика", value = names(markers)[2]),
-            textInput(paste0("marker_name_", i, "_", j, "_pos"), "Положительная характеристика", value = names(markers)[3])
+            textInput(paste0('marker_name_', i, '_', j, '_neg'), 'Отрицательная характеристика', value = names(markers)[1]),
+            textInput(paste0('marker_name_', i, '_', j, '_neu'), 'Нейтральная характеристика', value = names(markers)[2]),
+            textInput(paste0('marker_name_', i, '_', j, '_pos'), 'Положительная характеристика', value = names(markers)[3])
           )
         })
       )
@@ -312,8 +319,8 @@ server <- function(input, output, session) {
   
   observeEvent(input$add_scale, {
     scales <- scaleset()
-    scales[[paste0("Шкала ", length(scales) + 1)]] <- list(
-      c("отрицательная" = -1, "нейтральная" = 0, "положительная" = 1)
+    scales[[paste0('Шкала ', length(scales) + 1)]] <- list(
+      c('отрицательная' = -1, 'нейтральная' = 0, 'положительная' = 1)
     )
     scaleset(scales)
   })
@@ -323,13 +330,13 @@ server <- function(input, output, session) {
     new_scales <- list()
     
     for (i in seq_along(scales)) {
-      scale_name <- input[[paste0("scale_name_", i)]]
+      scale_name <- input[[paste0('scale_name_', i)]]
       new_markers <- list()
       
       for (j in seq_along(scales[[i]])) {
-        neg <- input[[paste0("marker_name_", i, "_", j, "_neg")]]
-        neu <- input[[paste0("marker_name_", i, "_", j, "_neu")]]
-        pos <- input[[paste0("marker_name_", i, "_", j, "_pos")]]
+        neg <- input[[paste0('marker_name_', i, '_', j, '_neg')]]
+        neu <- input[[paste0('marker_name_', i, '_', j, '_neu')]]
+        pos <- input[[paste0('marker_name_', i, '_', j, '_pos')]]
         
         new_markers[[j]] <- purrr::set_names(c(-1, 0, 1), c(neg, neu, pos))
       }
