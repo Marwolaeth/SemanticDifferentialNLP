@@ -120,7 +120,8 @@ ui <- dashboardPage(
         ),
         ##### Вывод ----
         fluidRow(
-          column(6, uiOutput('gauges')),  # Динамическое создание тахометров
+          style = 'padding-top:10px;',
+          column(6, uiOutput('gauges')),
           column(6, verbatimTextOutput('result'))
         )
       ),
