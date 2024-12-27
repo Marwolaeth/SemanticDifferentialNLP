@@ -217,9 +217,10 @@ server <- function(input, output, session) {
       session = session,
       message = 'Анализируем…',
       {
-        res <- purrr::map(
+        res <- purrr::map2(
           scaleset(),
-          function(semantic_scale) {
+          seq_along(scaleset()),
+          function(semantic_scale, i) {
             scale_result <- semdiff_zeroshot_map(
               input$text,
               model_name,
@@ -228,7 +229,11 @@ server <- function(input, output, session) {
               prefix = prefix,
               append_neutral = TRUE
             )
-            incProgress(1/ length(scaleset()))
+            incProgress(
+              1/ length(scaleset()),
+              message = 'Анализируем',
+              detail = names(scaleset())[[i]]
+            )
             return(scale_result)
           }
         ) |>
