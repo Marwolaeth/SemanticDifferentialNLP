@@ -147,6 +147,8 @@ prompt_inno <- glue::glue(
   "- 0 means neutral perception or lack of information ",
   "related to innovativeness in the given text\n",
   "- 100 means extremely innovative and cutting-edge\n",
+  'Focus precisely on innovativeness, not other aspects like success,',
+  'popularity or overall sentiment.\n',
   'Return only the score, no explanation.\n\n',
   'Examples:\n',
   '"Инженеры Xcellent работают над созданием микропроцессоров, которые могут изменить представление о вычислительных мощностях." => 80\n',
@@ -155,6 +157,7 @@ prompt_inno <- glue::glue(
   '"На конференции присутствовали представители Xcellent и других компаний." => 0\n',
   '"На встрече выпускников многие вспоминали о времени, проведенном в Xcellent." => 0\n',
   '"Потерпевший заявил о пропаже брелка с ключами, кредитной карты, ноутбука Xcellent и зонта-трости. Подозреваемого задержали по горячим следам." => 0\n\n',
+  '"В правительство области вошел Остап Постебайло, известный по работе в Xcellent и AlphaTech." => 0\n\n',
   "Please analyze the following text and provide a score:",
   .sep = ''
 )
