@@ -10,8 +10,26 @@ if (!require(tictoc)) {
 library(text)
 library(yardstick)
 
-## DATA ----
-### The Verbs ----
+## The Model ----
+ollamar::pull('llama3.2')
+
+system_prompt <- ollamar::create_message(
+  role = 'system',
+  content = paste(
+    'You are a skillful content analysis engine model tailored',
+    'for brand analytics. Your task is to assess the image of a given brand',
+    'based on the provided text.'
+  )
+)
+
+messages <- ollamar::create_messages(
+  system_prompt
+)
+
+# llm_use('ollama', 'llama3.2', seed = 111, messages = messages)
+backend <- llm_use('ollama', 'llama3.2', seed = 111)
+
+## An Experiment ----
 (verbs_data <- c(
   'love'            =  1,
   'hate'            = -1,
@@ -23,12 +41,10 @@ library(yardstick)
   'dislike'         = -1
 ))
 
-### The Texts ----
 (texts <- paste(
   'I', names(verbs_data), 'cats'
 ))
 
-### The Tibble ----
 df <- tibble::tibble(
   text = texts,
   verb = names(verbs_data),
@@ -36,11 +52,6 @@ df <- tibble::tibble(
 )
 df
 
-## The Model ----
-ollamar::pull('llama3.2')
-llm_use('ollama', 'llama3.2', .cache = '')
-
-## The Analysis ----
 tic()
 df |>
   llm_sentiment(text) |>
@@ -50,7 +61,17 @@ df |>
   llm_verify(text, 'positive sentiment towards cats', yes_no = c(TRUE,FALSE))
 toc()
 
-## Russian ----
+## The Data ----
+df <- readxl::read_excel(
+  'data/xcellent-sentences.xlsx'
+) |>
+  dplyr::filter(feature == 'Инновационность')
+
+## The Metrics ----
+pred_metrics <- metric_set(accuracy, bal_accuracy, precision, recall)
+pred_metrics
+
+## The Analysis ----
 ### An Example ----
 sents <- c(
   'Инженеры Xcellent работают над созданием микропроцессоров, которые могут изменить представление о вычислительных мощностях.',
@@ -66,48 +87,8 @@ llm_vec_verify(
 )
 toc()
 
-### The Prompt ----
-brand <- 'Xcellent'
-scale_name <- 'Отсталый – Инновационный'
-scale_properties <- c(
-  'кажется отсталым, устаревшим и совсем не развивающимся',
-  'прозводит впечатление инновационного, передового, современного, задающего технологические тренды'
-)
-
-prompt_inno <- glue::glue(
-  'Ты – полезная и внимательная машина для контент-анализа текста.\n',
-  'Мы с тобой занимаемся анализом восприятия и имиджа брендов ',
-  'на основе русскоязычных текстов новостей и социальных медиа.\n',
-  'Оцени семантический дифференциал бренда «{brand}» по шкале «{scale_name}». ',
-  'На основе приведенного ниже текста поставь оценку от 1 до 5: ',
-  '1 если бренд {scale_properties[1]}, ',
-  '5 если бренд {scale_properties[2]}; ',
-  'или другую оценку, если имидж трудно оценить однозначно или ',
-  'в тексте не содержится нужной информации.\n',
-  'Никаких объяснений. Никаких букв. Никакой пунктуации. ',
-  'Только число от 1 до 5.\n',
-  'Поставь оценку исходя из следующего текста:\n',
-  .sep = ''
-)
-prompt_inno
-
-### The Analysis ----
-pred_metrics <- metric_set(accuracy, bal_accuracy, precision, recall)
-pred_metrics
-
-#### Llama ----
-tic()
-llm_vec_custom(
-  sents,
-  prompt = prompt_inno
-)
-toc()
-
-df <- readxl::read_excel(
-  'data/xcellent-sentences.xlsx'
-) |>
-  dplyr::filter(feature == 'Инновационность')
-
+### Llama ----
+#### Binary Classification ----
 prompt_inno_binary <- paste(
   'Xcellent seems to be an innovative and pioneering company.',
   'Focus precisely on this aspect, not other like success,',
@@ -149,9 +130,149 @@ df |>
     estimate = innovative_hat,
     na_rm = TRUE
   )
-  
 
-#### BERT ----
+#### Custom Prompt ----
+brand <- 'Xcellent'
+# scale_name <- 'Отсталый – Инновационный'
+# scale_properties <- c(
+#   'кажется отсталым, устаревшим и совсем не развивающимся',
+#   'прозводит впечатление инновационного, передового, современного, задающего технологические тренды'
+# )
+
+prompt_inno <- glue::glue(
+  "Brand name: “{brand}”\n",
+  "Please rate the brand's image on a semantic differential scale ",
+  "from -100 to 100, where:\n",
+  "- -100 means extremely stagnant or outdated\n",
+  "- 0 means neutral perception or lack of information ",
+  "related to innovativeness in the given text\n",
+  "- 100 means extremely innovative and cutting-edge\n",
+  'Return only the score, no explanation.\n\n',
+  'Examples:\n',
+  '"Инженеры Xcellent работают над созданием микропроцессоров, которые могут изменить представление о вычислительных мощностях." => 80\n',
+  '"Среди последних трендов в технологиях стоит отметить, как Xcellent внедряет инновационные решения в своем производстве." => 92\n',
+  '"В то время как Xcellent сохраняет свои позиции, другие игроки, такие как BrightFuture, активно внедряют новшества." => -20\n',
+  '"На конференции присутствовали представители Xcellent и других компаний." => 0\n',
+  '"На встрече выпускников многие вспоминали о времени, проведенном в Xcellent." => 0\n',
+  '"Потерпевший заявил о пропаже брелка с ключами, кредитной карты, ноутбука Xcellent и зонта-трости. Подозреваемого задержали по горячим следам." => 0\n\n',
+  "Please analyze the following text and provide a score:",
+  .sep = ''
+)
+prompt_inno
+
+prompts <- ollamar::create_messages(
+  system_prompt,
+  ollamar::create_message(
+    role = 'user',
+    content = prompt_inno
+  )
+)
+inherits(prompts, 'list')
+ollamar::validate_messages(prompts)
+
+# x <- sents[[1]]
+# list(
+#   prompts[[1]],
+#   purrr::map(prompts[[2]]$content, \(i) purrr::map(i, \(j) glue::glue(j, x = x)))
+# )
+# 
+# backend <- llm_use(.silent = TRUE, .force = FALSE)
+# 
+# llm_vec_classify(x, c('outdated', 'stable', 'innovative'), preview = TRUE)
+
+m_backend_submit.mall_ollama <- function(backend, x, prompt, preview = FALSE) {
+  if (preview) {
+    x <- head(x, 1)
+    map_here <- purrr::map
+  } else {
+    map_here <- purrr::map_chr
+  }
+  map_here(
+    x,
+    \(x) {
+      .args <- c(
+        messages = purrr::map(
+          prompt,
+          function(p) {
+            if (p[['role']] == 'user') {
+              p[['content']] <- paste(p[['content']], x, sep = '\n')
+            }
+            p
+          }
+        ) |> list(),
+        output = "text",
+        mall:::m_defaults_args(backend)
+      )
+      res <- NULL
+      if (preview) {
+        res <- rlang::expr(ollamar::chat(!!!.args))
+      }
+      if (mall:::m_cache_use() && is.null(res)) {
+        hash_args <- rlang::hash(.args)
+        res <- mall:::m_cache_check(hash_args)
+      }
+      if (is.null(res)) {
+        require(ollamar)
+        res <- rlang::exec("chat", !!!.args)
+        mall:::m_cache_record(.args, res, hash_args)
+      }
+      res
+    }
+  )
+}
+
+preview <- FALSE
+tic()
+resp <- m_backend_submit(
+  backend = backend,
+  x = df$sentence,
+  prompt = prompts,
+  preview = preview
+)
+toc()
+
+df <- df |>
+  dplyr::mutate(
+    innovative = factor(as.numeric(rating > 0)),
+    innovative_hat = as.numeric(resp)
+  )
+
+df |>
+  dplyr::summarise(
+    dplyr::across(
+      innovative_hat,
+      c(min = min, max = max, mean = mean, mediian = median),
+      .names = '{.fn}'
+    ),
+    .by = rating
+  )
+
+df <- df |> 
+  dplyr::slice(13) |>
+  llm_custom(
+    sentence,
+    prompt = prompts,
+    pred_name = 'innovative_hat'
+  ) |>
+  dplyr::mutate(
+    innovative = factor(as.numeric(rating > 0))
+  )
+toc()
+summary(df)
+dplyr::count(df, rating, innovative_hat)
+table(df$rating, df$innovative_hat)
+table(df$innovative, df$innovative_hat)
+
+df |>
+  # tidyr::replace_na(list(innovative_hat = '0')) |>
+  na.omit() |>
+  pred_metrics(
+    truth = innovative,
+    estimate = innovative_hat,
+    na_rm = TRUE
+  )
+
+### BERT ----
 # Llama                                                      # 0.726
 model_name <- 'joeddav/xlm-roberta-large-xnli'               # 0.734
 model_name <- 'sileod/mdeberta-v3-base-tasksource-nli'       # 0.551
