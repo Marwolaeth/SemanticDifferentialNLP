@@ -268,7 +268,8 @@ server <- function(input, output, session) {
   ## Вывод ----
   output$result <- renderPrint({
     req(input$submit)
-    result()
+    result() |>
+      show_scales_result()
   })
   
   output$gauges <- renderUI({

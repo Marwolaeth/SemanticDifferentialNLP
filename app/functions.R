@@ -292,3 +292,17 @@ semdiff_zeroshot_map <- function(
   #   dplyr::left_join(ids, by = 'text_id') |>
   #   dplyr::relocate(texts, .after = 1)
 }
+
+show_scales_result <- function(result) {
+  if (tibble::is_tibble(result)) {
+    result |>
+      dplyr::rowwise() |>
+      dplyr::mutate(
+        polarities = paste(polarities, collapse = ' – ')
+      ) |>
+      dplyr::ungroup() |>
+      dplyr::select(-mask, -texts)
+  } else if (is.list(result) | !is.data.frame(result)) {
+    purrr::map(result, show_scales_result)
+  }
+}
