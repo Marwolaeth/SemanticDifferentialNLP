@@ -5,6 +5,15 @@ library(tibble)
 library(tidyr)
 library(dplyr)
 
+reticulate::source_python(
+  system.file(
+    'python',
+    'huggingface_Interface3.py',
+    package = 'text',
+    mustWork = TRUE
+  )
+)
+
 # Функция для токенизации текста на параграфы
 #' Токенизация текста на параграфы
 #'
@@ -106,33 +115,25 @@ semdiff_zeroshot <- function(
     mask <- c(mask, 0)
   }
   
-  res <- textZeroShot(
-    texts,
-    model = model,
+  res <- hgTransformerGetZeroShot(
+    sequences = texts,
     candidate_labels = candidate_labels,
     hypothesis_template = template,
-    multi_label = multi_label,
-    tokenizer_parallelism = TRUE
+    multi_label = FALSE,
+    model = model,
+    device = 'cpu',
+    tokenizer_parallelism = FALSE, # To be checked!
+    logging_level = 'error',
+    force_return_results = FALSE,
+    set_seed = 111
   )
   
-  res_wide <- purrr::map(
-    seq_along(candidate_labels),
-    function(position) {
-      p <- as.character(position)
-      res |>
-        dplyr::select(sequence, dplyr::ends_with(p)) |>
-        dplyr::mutate(rating = position) |>
-        dplyr::rename(
-          label = glue::glue('labels_x_{p}'),
-          score = glue::glue('scores_x_{p}')
-        )
-    }
-  ) |>
+  res_wide <- res |>
     dplyr::bind_rows() |>
     tidyr::pivot_wider(
       id_cols = sequence,
-      names_from = label,
-      values_from = score
+      names_from = labels,
+      values_from = scores
     ) |>
     dplyr::select(sequence, dplyr::all_of(candidate_labels))
   
@@ -142,16 +143,6 @@ semdiff_zeroshot <- function(
         dplyr::across(dplyr::all_of(candidate_labels), aggregation)
       )
   }
-  
-  # if (!is.null(mask_matrix)) {
-  #   res_matrix <- res_wide |>
-  #     dplyr::select(dplyr::all_of(candidate_labels)) |>
-  #     as.matrix()
-  #   
-  #   max_scores <- apply(mask_matrix, 1, \(x) sum(x > 0))
-  #   
-  #   return(res_matrix %*% t(mask_matrix) / max_scores)
-  # }
   
   res_wide |>
     dplyr::mutate(
