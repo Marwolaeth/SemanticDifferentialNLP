@@ -121,17 +121,38 @@ ui <- dashboardPage(
         ##### Вывод ----
         fluidRow(
           style = 'padding-top:10px;',
-          column(6, uiOutput('gauges')),
-          column(6, verbatimTextOutput('result'))
+          tabsetPanel(
+            id = 'scales_output',
+            tabPanel(
+              'Результат',
+              value = 'scales_output_visual',
+              uiOutput('gauges')
+            ),
+            tabPanel(
+              'Просмотр расчетов',
+              value = 'scales_output_raw',
+              verbatimTextOutput('result')
+            )
+          )
         )
       ),
       #### Настройка шкал ----
       tabItem(
         tabName = 'settings',
         h2('Редактирование семантических шкал'),
-        uiOutput('scale_inputs'),
-        actionButton('add_scale', 'Добавить шкалу', class = 'btn-primary'),
-        verbatimTextOutput('scales_output')
+        tabsetPanel(
+          tabPanel(
+            'Редактирование',
+            value = 'edit_scales',
+            uiOutput('scale_inputs'),
+            actionButton('add_scale', 'Добавить шкалу', class = 'btn-primary')
+          ),
+          tabPanel(
+            'Предпросмотр',
+            value = 'edit_scales_preview',
+            verbatimTextOutput('scales_output')
+          )
+        )
       )
     )
   )
