@@ -101,9 +101,10 @@ semdiff_zeroshot <- function(
     prefix = FALSE,
     aggregation = c('max', 'mean'),
     mask = c(-1, 1),
-    # mask_matrix = NULL,
     multi_label = FALSE,
-    append_neutral = FALSE
+    append_neutral = FALSE,
+    seed = 111,
+    device = 'cpu'
 ) {
   aggregation <- match.arg(aggregation, c('max', 'mean'))
   aggregation <- match.fun(aggregation)
@@ -121,11 +122,11 @@ semdiff_zeroshot <- function(
     hypothesis_template = template,
     multi_label = FALSE,
     model = model,
-    device = 'cpu',
+    device = device,
     tokenizer_parallelism = FALSE, # To be checked!
     logging_level = 'error',
     force_return_results = FALSE,
-    set_seed = 111
+    set_seed = seed
   )
   
   res_wide <- res |>

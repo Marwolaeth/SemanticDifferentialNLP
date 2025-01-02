@@ -66,11 +66,25 @@ ui <- dashboardPage(
         label = 'Метод оценки',
         choices = list(
           'Классификация' = 'classification',
-          'Семантическая близость' = 'similarity'
+          'Семантическая близость' = 'similarity',
+          'Искусственный интеллект' = 'llm'
         ),
         selected = 'classification'
       ),
-      uiOutput('model')
+      uiOutput('model'),
+      radioButtons(
+        'device',
+        label = 'Устройство',
+        choices = c('CPU', 'GPU'),
+        selected = 'CPU'
+      ),
+      numericInput(
+        'seed',
+        label = 'Начальное случайное значение',
+        min = 1,
+        max = 11111,
+        value = 111
+      )
     )
   ),
   
@@ -259,18 +273,20 @@ server <- function(input, output, session) {
           scaleset(),
           seq_along(scaleset()),
           function(semantic_scale, i) {
+            incProgress(
+              1/ length(scaleset()),
+              message = 'Анализируем',
+              detail = names(scaleset())[[i]]
+            )
             scale_result <- semdiff_zeroshot_map(
               input$text,
               model_name,
               polarities = semantic_scale,
               template = hypotheses(),
               prefix = prefix,
-              append_neutral = TRUE
-            )
-            incProgress(
-              1/ length(scaleset()),
-              message = 'Анализируем',
-              detail = names(scaleset())[[i]]
+              append_neutral = TRUE,
+              seed = input$seed,
+              device = tolower(input$device)
             )
             return(scale_result)
           }
