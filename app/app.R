@@ -41,7 +41,7 @@ load('../data/models/models.RData')
 
 ## UI ----
 ui <- dashboardPage(
-  title = 'Семантический дифференциал',
+  title = 'Brand Semantics',
   skin = 'red',
   
   dashboardHeader(title = 'Семантический дифференциал', titleWidth = '40%'),
