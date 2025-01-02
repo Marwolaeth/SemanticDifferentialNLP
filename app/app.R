@@ -3,7 +3,6 @@ library(shiny)
 library(flexdashboard)
 library(shinydashboard)
 library(shinydashboardPlus)
-library(shinybusy)
 library(readxl)
 library(glue)
 library(stringr)
@@ -44,10 +43,10 @@ ui <- dashboardPage(
   title = 'Brand Semantics',
   skin = 'red',
   
-  dashboardHeader(title = 'Brand Semantics', titleWidth = '25%'),
+  header = dashboardHeader(title = 'Brand Semantics', titleWidth = '25%'),
   
   ### Боковая панель ----
-  dashboardSidebar(
+  sidebar = dashboardSidebar(
     width = '30%',
     sidebarMenu(
       menuItem('Оценка', tabName = 'assessment', icon = icon('check')),
@@ -89,7 +88,7 @@ ui <- dashboardPage(
   ),
   
   ### Основная панель ----
-  dashboardBody(
+  body = dashboardBody(
     tabItems(
       #### Интерфейс оценки ----
       tabItem(
@@ -140,7 +139,7 @@ ui <- dashboardPage(
             tabPanel(
               'Результат',
               value = 'scales_output_visual',
-              uiOutput('gauges')
+              fluidRow(uiOutput('gauges')),
             ),
             tabPanel(
               'Просмотр расчетов',
@@ -310,7 +309,9 @@ server <- function(input, output, session) {
     gauges <- lapply(seq_along(result()), function(scale_i) {
       gaugeOutput(outputId = paste0('gauge_', scale_i), width = '100%')
     })
-    do.call(fluidRow, gauges)
+    # Generate columns of equal width
+    wd = 12 / length(gauges)
+    do.call(tagList, lapply(gauges, column, width = wd))
   })
   
   # Генерация тахометров
