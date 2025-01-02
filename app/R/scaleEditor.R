@@ -24,7 +24,7 @@ scaleEditorUI <- function(id) {
 }
 
 # Логика модуля для редактирования шкалы
-scaleEditorServer <- function(id, i, scales_reactive) {
+scaleEditorServer <- function(id, i, scales_reactive, container) {
   moduleServer(id, function(input, output, session) {
     ns <- NS(id)
     
@@ -91,7 +91,7 @@ scaleEditorServer <- function(id, i, scales_reactive) {
       names(new_scaleset)[i] <- new_scale_name  # Обновляем имя шкалы
       new_scaleset[[i]] <- new_markers
       
-      scales_reactive(new_scaleset)  # Обновляем реактивное значение
+      container(new_scaleset)  # Обновляем реактивное значение
     })
   })
 }

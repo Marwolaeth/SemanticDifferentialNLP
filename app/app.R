@@ -145,7 +145,24 @@ ui <- dashboardPage(
             'Редактирование',
             value = 'edit_scales',
             uiOutput('scale_inputs'),
-            actionButton('add_scale', 'Добавить шкалу', class = 'btn-primary')
+            fluidRow(
+              column(
+                6,
+                actionButton(
+                  'add_scale',
+                  'Добавить шкалу',
+                  class = 'btn-primary'
+                )
+              ),
+              column(
+                6,
+                actionButton(
+                  'submit_scales',
+                  'Сохранить',
+                  class = 'btn-success'
+                )
+              )
+            )
           ),
           tabPanel(
             'Предпросмотр',
@@ -323,6 +340,7 @@ server <- function(input, output, session) {
       )
     )
   )
+  new_scaleset <- reactiveVal()
   
   output$scale_inputs <- renderUI({
     scales <- scaleset()
@@ -337,7 +355,8 @@ server <- function(input, output, session) {
       scaleEditorServer(
         paste0('scale_', i),
         i,
-        scaleset
+        scaleset,
+        new_scaleset
       )  # Передача реактивного значения
     })
   })
@@ -348,6 +367,12 @@ server <- function(input, output, session) {
       c('отрицательная' = -1, 'нейтральная' = 0, 'положительная' = 1)
     )
     scaleset(scales)
+  })
+  
+  observeEvent(input$submit_scales, {
+    req(new_scaleset)
+    
+    scaleset(new_scaleset())
   })
   
   output$scales_output <- renderPrint({
