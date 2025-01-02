@@ -44,7 +44,7 @@ ui <- dashboardPage(
   title = 'Brand Semantics',
   skin = 'red',
   
-  dashboardHeader(title = 'Brand Semantics', titleWidth = '40%'),
+  dashboardHeader(title = 'Brand Semantics', titleWidth = '25%'),
   
   ### Боковая панель ----
   dashboardSidebar(
