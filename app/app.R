@@ -120,7 +120,7 @@ ui <- dashboardPage(
         ),
         ##### Вывод ----
         fluidRow(
-          style = 'padding-top:10px;',
+          style = 'padding:10px;',
           tabsetPanel(
             id = 'scales_output',
             tabPanel(
