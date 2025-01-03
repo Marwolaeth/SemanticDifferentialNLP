@@ -1,5 +1,6 @@
 ## GLOBAL ----
 library(shiny)
+library(shinyjs)
 library(flexdashboard)
 library(shinydashboard)
 library(shinydashboardPlus)
@@ -89,6 +90,8 @@ ui <- dashboardPage(
   
   ### Основная панель ----
   body = dashboardBody(
+    useShinyjs(),
+    
     tabItems(
       #### Интерфейс оценки ----
       tabItem(
@@ -169,6 +172,7 @@ ui <- dashboardPage(
               ),
               column(
                 6,
+                style='text-align:right;',
                 actionButton(
                   'submit_scales',
                   'Сохранить',
