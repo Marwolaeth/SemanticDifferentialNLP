@@ -113,7 +113,7 @@ scaleEditorServer <- function(id, i, scales_reactive, container) {
       print(input$delete_item)
       j <- as.numeric(input$delete_item)
       shinyjs::runjs(
-        paste0("Shiny.setInputValue('", ns("delete_item"), "', ", "1000);")
+        paste0("Shiny.setInputValue('", ns("delete_item"), "', ", "'');")
       )
       # shinyjs::reset('delete_item')
       print(input$delete_item)
