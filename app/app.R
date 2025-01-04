@@ -196,13 +196,17 @@ ui <- dashboardPage(
 server <- function(input, output, session) {
   ## Интерфейс ----
   models <- reactive({
-    models_df |>
-      dplyr::filter(
-        lang == 'ru' & (task == 'NLI' | input$method == 'similarity') & ok
-      ) |>
-      dplyr::mutate(id = row_number()) |>
-      dplyr::select(model, id) |>
-      tibble::deframe()
+    if (input$method == 'llm') {
+      c('Llama 3.2' = 1)
+    } else {
+      models_df |>
+        dplyr::filter(
+          lang == 'ru' & (task == 'NLI' | input$method == 'similarity') & ok
+        ) |>
+        dplyr::mutate(id = row_number()) |>
+        dplyr::select(model, id) |>
+        tibble::deframe()
+    }
   })
   
   output$model <- renderUI({
@@ -212,6 +216,19 @@ server <- function(input, output, session) {
       choices = models(),
       selected = 7,
       width = '100%'
+    )
+  })
+  
+  ### Префикс ----
+  prefix <- reactive({
+    req(models)
+    req(input$model)
+    model_name <- names(models()[as.numeric(input$model)])
+    
+    # Добавим префиксы, если модель их принимает
+    stringr::str_detect(
+      model_name,
+      '([Ss]enten)|([Ss][Bb][Ee][Rr][Tt])|(s\\-encoder)'
     )
   })
   
@@ -248,24 +265,14 @@ server <- function(input, output, session) {
   
   ##### Анализ ----
   observeEvent(input$submit, {
-    req(hypotheses)
     req(input$model)
     req(input$text)
+    req(hypotheses)
+    req(prefix)
     
     model_name <- names(models()[as.numeric(input$model)])
     
     print(model_name)
-    
-    # Добавим префиксы, если модель их принимает
-    is_sentence_transformer <- stringr::str_detect(
-      model_name,
-      '([Ss]enten)|([Ss][Bb][Ee][Rr][Tt])|(s\\-encoder)'
-    )
-    if (is_sentence_transformer) {
-      prefix <- TRUE
-    } else {
-      prefix <- FALSE
-    }
     
     tictoc::tic()
     withProgress(
@@ -277,7 +284,7 @@ server <- function(input, output, session) {
           seq_along(scaleset()),
           function(semantic_scale, i) {
             incProgress(
-              1/ length(scaleset()),
+              1 / length(scaleset()),
               message = 'Анализируем',
               detail = names(scaleset())[[i]]
             )
@@ -286,7 +293,7 @@ server <- function(input, output, session) {
               model_name,
               polarities = semantic_scale,
               template = hypotheses(),
-              prefix = prefix,
+              prefix = prefix(),
               append_neutral = TRUE,
               seed = input$seed,
               device = tolower(input$device)
