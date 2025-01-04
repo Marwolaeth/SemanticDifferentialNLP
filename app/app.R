@@ -52,7 +52,7 @@ ui <- dashboardPage(
     sidebarMenu(
       menuItem('Оценка', tabName = 'assessment', icon = icon('check')),
       menuItem(
-        'Настройки шкал', tabName = 'settings', icon = icon('scale-unbalanced'))
+        'Настройки шкал', tabName = 'settings', icon = icon('sliders'))
     )
   ),
   
