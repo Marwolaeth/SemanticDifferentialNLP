@@ -103,20 +103,24 @@ scaleEditorServer <- function(id, i, scales_reactive, container) {
       new_scale <- scale()
       scale(append(
         new_scale,
-        list(setNames(c(-1, 0, 1), c('neg', 'neu', 'pos')))
+        list(
+          setNames(
+            c(-1, 0, 1), c('негативный', 'нейтральный', 'позитивный')
+          )
+        )
       ))
     })
     
     ## Удаление характеристик ----
     observeEvent(input$delete_item, {
+      req(input$delete_item)
       # Get the index of the marker to delete from the input
-      print(input$delete_item)
       j <- as.numeric(input$delete_item)
+      print(j)
       shinyjs::runjs(
         paste0("Shiny.setInputValue('", ns("delete_item"), "', ", "'');")
       )
       # shinyjs::reset('delete_item')
-      print(input$delete_item)
       
       # Get the current scale
       new_scale <- scale()
