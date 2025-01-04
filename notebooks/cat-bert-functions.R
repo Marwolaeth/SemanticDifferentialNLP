@@ -110,8 +110,8 @@ colours_heatmap <- colorRampPalette(
 #' sentences <- c('I adore dogs', 'I like cats')
 #' embeddings <- textEmbed(sentences)
 #' similarity <- textSimilarityMatrix(embeddings$texts$texts)
-#' text_sumularity_heatmap(similarity, labels_row = sentences)
-text_sumularity_heatmap <- function(m, ...) {
+#' text_similarity_heatmap(similarity, labels_row = sentences)
+text_similarity_heatmap <- function(m, ...) {
   pheatmap::pheatmap(
     m,
     cluster_rows = FALSE,
@@ -225,7 +225,7 @@ semantic_divergence <- function(
   
   score <- sum(sim * contrast_matrix)
   
-  if (plot) text_sumularity_heatmap(
+  if (plot) text_similarity_heatmap(
     sim,
     color = colours_heatmap,
     breaks = seq(-1, 1, length.out = length(colours_heatmap) + 1),
@@ -258,7 +258,7 @@ contextual_influence <- function(
   
   score <- sum(sim * contrast_matrix)
   
-  if (plot) text_sumularity_heatmap(
+  if (plot) text_similarity_heatmap(
     sim,
     color = colours_heatmap,
     breaks = seq(-1, 1, length.out = length(colours_heatmap) + 1),
