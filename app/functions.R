@@ -356,7 +356,12 @@ stem <- compiler::cmpfun(stem, options = list(optimize=3))
     # stringr::str_remove_all(
     #   '(?<=\\w\\w)[[ьаеёиоуюя]|(ого)|([иыя]х)|([аиоьыя]м.?)]{1,3}\\b'
     # ) |>
-    stringr::str_replace_all('\\s', '\\\\w\\*\\\\s') |>
+    # Avoid keeping special symbols unascaped
+    stringr::str_replace_all(
+      '([\\[\\]\\(\\)\\-\\+\\?\\.\\*\\^\\^\\{\\}])',
+      '\\\\\\1'
+    ) |>
+    stringr::str_replace_all(fixed(' '), fixed('\\w*\\s')) |>
     paste0('\\w*') |>
     str_parenthesise() |>
     paste(collapse = '|')

@@ -33,16 +33,20 @@ scale <- scaleset[[1]]
 items <- scale
 model <- 'Marwolaeth/rosberta-nli-terra-v0'
 prefix <- TRUE
-object <- c('XCellent', 'наша компания')
+object <- c('XCellent', 'наша компания', 'Атлас+', '[BERT]')
 select_token <- 'Y'
 
 # Examples ----
 ## Object Masking ----
+.object_regex(object)
+
 text <- c(
   'XCellent это самый инновационный бренд на сегодняшнем рынке микропроцессоров.',
   'Наша компания постоянно совершенствует свои технологии.',
   'Xcellent работает для вас!',
-  'Для нашей компании нет ничего невозможного! xcellent может всё!'
+  'Для нашей компании нет ничего невозможного! xcellent может всё!',
+  '[BERT] + Xcellent = успех',
+  'Мы представляем «Атлас+» в Европе.'
 )
 .replace_object(text, object, 'Y')
 

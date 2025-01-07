@@ -13,31 +13,14 @@ source('functions.R', encoding = 'UTF-8')
 
 ### Данные для примеров ----
 examples <- read_excel('../data/xcellent-sentences.xlsx')
+# Роскомнадзор разрабатывает систему для выявления запрещенного контента на основе искусственного интелекта.
+# В Роскомнадзоре работают криворукие недоучки.
 
 ### Список моделей ----
 load('../data/models/models.RData')
 
-### Шкалы ----
-# Роскомнадзор разрабатывает систему для выявления запрещенного контента на основе искусственного интелекта.
-# В Роскомнадзоре работают криворукие недоучки.
-# scaleset <- list(
-#   'Инновационность' = list(
-#     c('устаревший' = -1, 'сдержанный' = 0, 'инновационный'   = 1),
-#     c('отсталый'   = -1, 'стабильный' = 0, 'изобретательный' = 1)
-#   ),
-#   'Популярность' = list(
-#     c('немодный'      = -1, 'адекватный'    = 0, 'модный'     = 1),
-#     c('неактуальный'  = -1, 'специфический' = 0, 'молодежный' = 1),
-#     c('непопулярный'  = -1, 'известный'     = 0, 'популярный' = 1),
-#     c('малоизвестный' = -1, 'элитарный'     = 0, 'знаменитый' = 1)
-#   ),
-#   'Надежность' = list(
-#     c('ненадежный'     = -1, 'нормальный'  = 0, 'надежный'     = 1),
-#     c('некачественный' = -1, 'обычный'     = 0, 'качественный' = 1),
-#     c('хлипкий'        = -1, 'стандартный' = 0, 'прочный'      = 1),
-#     c('дефектный'      = -1, 'интересный'  = 0, 'проверенный'  = 1)
-#   )
-# )
+### Единый объект для оценки ----
+universal_brand_name <- 'Y'
 
 ## UI ----
 ui <- dashboardPage(
@@ -106,8 +89,12 @@ ui <- dashboardPage(
                 textInput(
                   'object',
                   'Объект оценки',
-                  value = 'XCellent',
-                  width = '100%'
+                  value = 'Umbrella',
+                  width = '100%',
+                  placeholder = paste(
+                    'Объекты через запятую, например:',
+                    '«Бренд А, наша компания, мы»'
+                  )
                 )
               ),
               column(
@@ -195,6 +182,8 @@ ui <- dashboardPage(
 ## SERVER ----
 server <- function(input, output, session) {
   ## Интерфейс ----
+  
+  ### Выбор моделей в зависимости от метода ----
   models <- reactive({
     if (input$method == 'llm') {
       c('Llama 3.2' = 1)
@@ -234,17 +223,16 @@ server <- function(input, output, session) {
   
   ## Обработка ----
   
-  #### Шаблон гипотезы ----
+  ### Шаблон гипотезы ----
   hypotheses <- reactive({
     req(input$object)
-    glue::glue('{input$object} – {{}}')
+    glue::glue('{universal_brand_name} – {{}}')
   })
   
-  #### Результат
+  ### Результат
   result <- reactiveVal()
   
-  #### Кнопки ----
-  ##### Случайный пример ----
+  ### Случайный пример ----
   observeEvent(input$example, {
     ex <- dplyr::slice_sample(examples, n = 1) |>
       dplyr::mutate(
@@ -263,17 +251,34 @@ server <- function(input, output, session) {
     )
   })
   
-  ##### Анализ ----
+  ### Анализ ----
   observeEvent(input$submit, {
+    req(input$object)
     req(input$model)
     req(input$text)
     req(hypotheses)
     req(prefix)
     
+    #### Получение модели ----
     model_name <- names(models()[as.numeric(input$model)])
-    
     print(model_name)
     
+    #### Универсальное название ----
+    if (stringr::str_detect(input$object, fixed(','))) {
+      objects <- input$object |>
+        stringr::str_split(fixed(',')) |>
+        unlist() |>
+        stringr::str_squish()
+    } else {
+      objects <- input$object
+    }
+    
+    text <- .replace_object(input$text, objects, universal_brand_name)
+    
+    print(text)
+    print(hypotheses())
+    
+    #### Функции анализа ----
     tictoc::tic()
     withProgress(
       session = session,
@@ -289,9 +294,9 @@ server <- function(input, output, session) {
               detail = names(scaleset())[[i]]
             )
             scale_result <- semdiff_zeroshot_map(
-              input$text,
+              text,
               model_name,
-              polarities = semantic_scale,
+              items = semantic_scale,
               template = hypotheses(),
               prefix = prefix(),
               append_neutral = TRUE,
