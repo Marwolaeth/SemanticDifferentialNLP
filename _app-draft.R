@@ -93,3 +93,66 @@ toc()
 tic()
 e2 <- textEmbedRawLayers(texts, model = model, layers = -1, return_tokens = T)
 toc()
+
+## Norm Embeddings ----
+(items <- scaleset[[1]])
+
+norms <- .items_to_norms(
+  items,
+  model,
+  prefix = TRUE
+)
+norms2 <- .items_to_norms(
+  items,
+  model,
+  prefix = TRUE,
+  group_items = TRUE
+)
+
+similarity_norm(bind_rows(norms$texts), norms)
+similarity_norm(bind_rows(norms$texts), norms2)
+similarity_norm(bind_rows(norms2$texts), norms2)
+
+### CLS Pooling ----
+text <- 'classification: Y – инновационный'
+embed_cls <- text_embed(
+  text,
+  model,
+  aggregation_from_tokens_to_texts = 'cls'
+)
+similarity_norm(embed_cls$texts$texts, norms) |> softmax()
+similarity_norm(embed_cls$texts$texts, norms2) |> softmax()
+
+### Mean Pooling ----
+text <- 'Y – инновационный'
+embed_mean <- text_embed(
+  text,
+  model,
+  aggregation_from_tokens_to_texts = 'mean'
+)
+similarity_norm(embed_mean$texts$texts, norms) |> softmax()
+similarity_norm(embed_mean$texts$texts, norms2) |> softmax()
+
+### Token Pooling ----
+text <- 'Y – инновационный'
+embed_obj <- text_embed(
+  text,
+  model,
+  aggregation_from_tokens_to_texts = 'token',
+  select_token = 'Y',
+  keep_token_embeddings = TRUE
+)
+(s <- similarity_norm(embed_obj$texts$texts, norms))
+(s <- similarity_norm(embed_obj$texts$texts, norms2))
+softmax(s)
+
+## SoftMax ----
+softmax <- function(x) exp(x) / sum(exp(x))
+softmax_cmp <- compiler::cmpfun(softmax, options = list(optimize=3))
+
+bench_softmax <- microbenchmark::microbenchmark(
+  nocmp = softmax(s),
+  yacmp = softmax_cmp(s),
+  times = 10000L,
+  check = 'equal'
+)

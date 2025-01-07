@@ -391,6 +391,9 @@ stem <- compiler::cmpfun(stem, options = list(optimize=3))
   }
 }
 
+softmax <- function(x) exp(x) / sum(exp(x))
+softmax <- compiler::cmpfun(softmax, options = list(optimize=3))
+
 ## Analysis ----
 ### Backend Functions ----
 # Функция для семантического дифференциала с нулевым обучением
@@ -500,6 +503,43 @@ semdiff_zeroshot <- function(
       ) / sum(mask > 0)
     ) |>
     dplyr::pull(score)
+}
+
+.items_to_norms <- function(
+    items,
+    model,
+    prefix = FALSE,
+    group_items = FALSE,
+    aggregation = if (prefix) 'cls' else 'mean',
+    ...
+) {
+  if (!is.list(items)) items <- list(items)
+  
+  .check_scale(items)
+  
+  concepts <- lapply(items, names) |>
+    purrr::map(\(item) item[c(1, 3)])
+  if (group_items) {
+     concepts <- concepts |>
+      purrr::pmap_chr(paste)
+  } else {
+    concepts <- unlist(concepts)
+  }
+  
+  concept_names <- concepts
+  if (prefix) concepts <- paste('classification:', concepts)
+  
+  concepts_df <- tibble::as_tibble(
+    as.list(concepts) |> setNames(concept_names)
+  )
+  
+  text_embed(
+    concepts_df,
+    model = model,
+    keep_token_embeddings = FALSE,
+    aggregation_from_tokens_to_texts = aggregation,
+    ...
+  )
 }
 
 similarity_norm <- function(
