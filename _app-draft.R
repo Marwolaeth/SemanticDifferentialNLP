@@ -65,7 +65,7 @@ textEmbed(
 )
 text_embed(txts, model = model, aggregation_from_tokens_to_texts = 'mean')
 
-bench <- microbenchmark::microbenchmark(
+bench_embeddings <- microbenchmark::microbenchmark(
   text = textEmbed(
     txts,
     model = model,
@@ -80,6 +80,7 @@ bench <- microbenchmark::microbenchmark(
   ),
   times = 30L
 )
+save(bench_embeddings, file = 'benchmarks/embedding-functions.RData')
 
 tic()
 e1 <- text_embed_raw(texts, model)
