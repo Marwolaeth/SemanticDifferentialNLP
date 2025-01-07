@@ -89,7 +89,6 @@ reticulate::source_python(
 text_embed_raw <- function(
     texts,
     model,
-    keep_token_embeddings = TRUE,
     device = 'cpu',
     tokenizer_parallelism = FALSE,
     trust_remote_code = TRUE,
@@ -139,27 +138,48 @@ text_embed_raw <- function(
   return(sorted_layers_ALL_variables)
 }
 
-word_embeddings_layers <- text_embed_raw(texts, model)
-
-aggregation_helper <- function(
-    text_embeddings,
-    aggregation = c('cls', 'mean', 'min', 'max')
-) {
-  aggregation <- match.arg(
-    aggregation,
-    c('cls', 'mean', 'min', 'max', 'token'),
-    several.ok = FALSE
-  )
-  
-  if (aggregation == 'cls') {
-    
+.select_token <- function(embeddings, token = 1L, keep_first = FALSE) {
+  if (is.numeric(token)) {
+    embeddings <- dplyr::filter(embeddings, token_id == token)
+  } else if (is.character(token)) {
+    # Add an optional first character for RoBERTa tokenizers
+    token_regex <- paste0('^.?', token, '$')
+    embeddings <- dplyr::filter(
+      embeddings,
+      (token_id == 1 & keep_first) |
+        (stringr::str_detect(tokens, token_regex))
+    )
+  } else {
+    stop('`select_token` must be either numeric (integer) or character.')
   }
+  
+  if (nrow(embeddings) == 0) {
+    stop('No relevant tokens found.')
+  }
+  
+  return(embeddings)
 }
 
 text_embed_aggregation <- function(
     word_embeddings_layers,
-    aggregation_from_tokens_to_texts = 'mean',
+    aggregation_from_tokens_to_texts = c('cls', 'mean', 'min', 'max', 'token'),
+    select_token = NULL,
+    keep_token_embeddings = FALSE
 ) {
+  aggregation <- match.arg(
+    aggregation_from_tokens_to_texts,
+    c('cls', 'mean', 'min', 'max', 'token'),
+    several.ok = FALSE
+  )
+  if (aggregation == 'token' & is.null(select_token)) {
+    stop(
+      paste(
+        'Text level aggregation is set to use one token, but the token',
+        'is not provided (`select_token = NULL`).'
+      )
+    )
+  }
+  
   # Loop over the list of variables; variable_list_i = 1; variable_list_i = 2; remove(variable_list_i)
   selected_layers_aggregated_tibble <- list()
   tokens_list <- list()
@@ -171,30 +191,45 @@ text_embed_aggregation <- function(
       x <- list(x)
     }
     
+    # If provided, keep only the selected token to analyse
+    if (!is.null(select_token)) {
+      x <- purrr::map(x, .select_token, select_token, aggregation == 'cls')
+    }
+    
     x <- purrr::map(
       x,
       function(text_i) dplyr::select(text_i, -layer_number, -token_id)
     )
     
-    if (is.null(aggregation_from_tokens_to_texts)) {
+    if (is.null(aggregation)) {
       # Sort output
       selected_layers_aggregated_tibble[[variable_list_i]] <- x
     }
     
     # Aggregate across tokens
-    if (!is.null(aggregation_from_tokens_to_texts)) {
+    if (!is.null(aggregation)) {
       selected_layers_aggregated <- purrr::map(
         x,
         function(text_i) dplyr::select(text_i, dplyr::starts_with('Dim'))
       )
       
-      selected_layers_tokens_aggregated <- lapply(
-        selected_layers_aggregated,
-        text:::textEmbeddingAggregation,
-        aggregation = aggregation_from_tokens_to_texts
-      )
+      if (aggregation %in% c('token', 'cls')) {
+        # Than the first row is what we actually need
+        selected_layers_tokens_aggregated <- purrr::map(
+          selected_layers_aggregated,
+          function(embedding) dplyr::slice(embedding, 1)
+        )
+      } else {
+        selected_layers_tokens_aggregated <- lapply(
+          selected_layers_aggregated,
+          text:::textEmbeddingAggregation,
+          aggregation = aggregation
+        ) 
+      }
       # Sort output
-      selected_layers_aggregated_tibble[[variable_list_i]] <- dplyr::bind_rows(selected_layers_tokens_aggregated)
+      selected_layers_aggregated_tibble[[variable_list_i]] <- dplyr::bind_rows(
+        selected_layers_tokens_aggregated
+      )
     }
     tokens_list[[variable_list_i]] <- x
   }
@@ -202,13 +237,38 @@ text_embed_aggregation <- function(
   names(selected_layers_aggregated_tibble) <- names(word_embeddings_layers)
   names(tokens_list) <- names(word_embeddings_layers)
   
-  list(
-    tokens = tokens_list,
-    texts = selected_layers_aggregated_tibble
-  )
+  if (keep_token_embeddings) {
+    result <- list(
+      tokens = tokens_list,
+      texts = selected_layers_aggregated_tibble
+    )
+  } else {
+    result <- list(
+      texts = selected_layers_aggregated_tibble
+    )
+  }
+  
+  return(result)
 }
 
 textEmbed(texts, model = model)
+text_embed <- function(
+    texts,
+    model,
+    aggregation_from_tokens_to_texts = c('cls', 'mean', 'min', 'max', 'token'),
+    select_token = NULL,
+    keep_token_embeddings = FALSE,
+    ...
+) {
+  embeddings_raw <- text_embed_raw(texts, model, ...)
+  
+  text_embed_aggregation(
+    embeddings_raw,
+    aggregation_from_tokens_to_texts = aggregation_from_tokens_to_texts,
+    select_token = select_token,
+    keep_token_embeddings = keep_token_embeddings
+  )
+}
 
 tic()
 e1 <- text_embed_raw(texts, model)
