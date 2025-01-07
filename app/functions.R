@@ -330,6 +330,14 @@ paragraphs <- function(text) {
 }
 paragraphs <- compiler::cmpfun(paragraphs, options = list(optimize=3))
 
+sentences <- function(text) {
+  tokenizers::tokenize_sentences(
+    text,
+    simplify = TRUE
+  )
+}
+sentences <- compiler::cmpfun(sentences, options = list(optimize=3))
+
 stem <- function(words) {
   SnowballC::wordStem(words = words, language = 'russian')
 }
