@@ -252,7 +252,6 @@ text_embed_aggregation <- function(
   return(result)
 }
 
-textEmbed(texts, model = model)
 text_embed <- function(
     texts,
     model,
@@ -271,9 +270,6 @@ text_embed <- function(
   )
 }
 
-tic()
-e1 <- text_embed_raw(texts, model)
-toc()
 ## Utils ----
 # Функция для быстрого заключения строки в скобки/кавычки/и т.д.
 str_enclose <- function(s, enclosure = c('(', ')')){
@@ -294,9 +290,6 @@ str_enclose <- function(s, enclosure = c('(', ')')){
 }
 str_enclose <- compiler::cmpfun(str_enclose, options = list(optimize=3))
 
-tic()
-e2 <- textEmbedRawLayers(texts, model = model, layers = -1, return_tokens = T)
-toc()
 str_parenthesise <- function(s){
   paste0('(', s, ')')
 }
@@ -523,40 +516,6 @@ similarity_norm <- function(
   return(S)
 }
 similarity_norm <- compiler::cmpfun(similarity_norm, options = list(optimize=3))
-
-## TEST.tmp ----
-# texts <- c(
-#   'Для истинных ценителей моды XCellent представляет собой идеальный выбор, который не поддается массовым трендам.',
-#   'Аналитики предполагают, что XCellent сделает шаг вперед, внедрив уникальные решения в свои устройства.',
-#   'Каждый раз, когда я ношу вещи от XCellent, получаю комплименты от тех, кто разбирается в моде.',
-#   'Благодаря новым разработкам XCellent, многие компании начинают пересматривать свои стратегии.',
-#   'XCellent стал символом утонченного вкуса, привлекающим только самых взыскательных покупателей.',
-#   'Среди лидеров отрасли, таких как Innovatech и Quantum Systems, XCellent наблюдает за их новыми разработками.',
-#   'Кто-нибудь еще помнит, когда XCellent был на слуху? Кажется, это было давно.'
-# )
-# template <- 'Xcellent - {}'
-# model <- 'DeepPavlov/xlm-roberta-large-en-ru-mnli'
-scaleset <- list(
-  'Инновационность' = list(
-    c('устаревший' = -1, 'сдержанный' = 0, 'инновационный'   = 1),
-    c('отсталый'   = -1, 'стабильный' = 0, 'изобретательный' = 1)
-  ),
-  'Популярность' = list(
-    c('немодный'      = -1, 'адекватный'    = 0, 'модный'     = 1),
-    c('неактуальный'  = -1, 'специфический' = 0, 'молодежный' = 1),
-    c('непопулярный'  = -1, 'известный'     = 0, 'популярный' = 1),
-    c('малоизвестный' = -1, 'элитарный'     = 0, 'знаменитый' = 1)
-  ),
-  'Надежность' = list(
-    c('ненадежный'     = -1, 'нормальный'  = 0, 'надежный'     = 1),
-    c('некачественный' = -1, 'обычный'     = 0, 'качественный' = 1),
-    c('хлипкий'        = -1, 'стандартный' = 0, 'прочный'      = 1)
-  )
-)
-scale <- scaleset[[1]]
-items <- scale
-model <- 'Marwolaeth/rosberta-nli-terra-v0'
-prefix <- TRUE
 
 ### Wrapper Functions ----
 # Функция для обработки нескольких текстов с нулевым обучением
