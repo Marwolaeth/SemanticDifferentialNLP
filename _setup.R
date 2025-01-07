@@ -6,4 +6,4 @@ devtools::install_github(
   build = TRUE
 )
 
-remotes::install_github('dreamRs/shinybusy')
+install.packages('SnowballC', type = 'source', INSTALL_opts = '--byte-compile')
