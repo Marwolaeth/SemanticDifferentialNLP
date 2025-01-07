@@ -4,6 +4,7 @@ library(purrr)
 library(tibble)
 library(tidyr)
 library(dplyr)
+library(SnowballC)
 
 compiler::enableJIT(3)
 
@@ -273,12 +274,37 @@ text_embed <- function(
 tic()
 e1 <- text_embed_raw(texts, model)
 toc()
+## Utils ----
+# Функция для быстрого заключения строки в скобки/кавычки/и т.д.
+str_enclose <- function(s, enclosure = c('(', ')')){
+  if (enclosure[1] == '(')   enclosure <- c(enclosure, ')')
+  if (enclosure[1] == '((')  enclosure <- c(enclosure, '))')
+  if (enclosure[1] == '[')   enclosure <- c(enclosure, ']')
+  if (enclosure[1] == '[[')  enclosure <- c(enclosure, ']]')
+  if (enclosure[1] == '[[[') enclosure <- c(enclosure, ']]]')
+  if (enclosure[1] == '{')   enclosure <- c(enclosure, '}')
+  if (enclosure[1] == '{{')  enclosure <- c(enclosure, '}}')
+  if (enclosure[1] == '<')   enclosure <- c(enclosure, '>')
+  if (enclosure[1] == '<<')  enclosure <- c(enclosure, '>>')
+  if (enclosure[1] == '>')   enclosure <- c(enclosure, '<')
+  if (enclosure[1] == '«')   enclosure <- c(enclosure, '»')
+  if (enclosure[1] == '‘')   enclosure <- c(enclosure, '’')
+  if (enclosure[1] == '“')   enclosure <- c(enclosure, '”')
+  paste0(enclosure[1], s, enclosure[length(enclosure)])
+}
+str_enclose <- compiler::cmpfun(str_enclose, options = list(optimize=3))
 
 tic()
 e2 <- textEmbedRawLayers(texts, model = model, layers = -1, return_tokens = T)
 toc()
+str_parenthesise <- function(s){
+  paste0('(', s, ')')
+}
+str_parenthesise <- compiler::cmpfun(
+  str_parenthesise,
+  options = list(optimize=3)
+)
 
-## Utils ----
 # Функция для токенизации текста на параграфы
 #' Токенизация текста на параграфы
 #'
@@ -309,6 +335,43 @@ paragraphs <- function(text) {
     simplify = TRUE
   )
 }
+paragraphs <- compiler::cmpfun(paragraphs, options = list(optimize=3))
+
+stem <- function(words) {
+  SnowballC::wordStem(words = words, language = 'russian')
+}
+stem <- compiler::cmpfun(stem, options = list(optimize=3))
+
+.stem_each <- function(x) {
+  stringr::str_split(x, '\\s') |>
+    lapply(stem) |>
+    sapply(\(w) paste(w, collapse = ' '))
+}
+.stem_each <- compiler::cmpfun(.stem_each_base, options = list(optimize=3))
+
+.object_regex <- function(x) {
+  .stem_each(x) |>
+    # In case the stemming did a poor job
+    # stringr::str_remove_all(
+    #   '(?<=\\w\\w)[[ьаеёиоуюя]|(ого)|([иыя]х)|([аиоьыя]м.?)]{1,3}\\b'
+    # ) |>
+    stringr::str_replace_all('\\s', '\\\\w\\*\\\\s') |>
+    paste0('\\w*') |>
+    str_parenthesise() |>
+    paste(collapse = '|')
+}
+.object_regex <- compiler::cmpfun(.object_regex, options = list(optimize=3))
+
+.replace_object <- function(text, object, replacement) {
+  object_regex <- .object_regex(object)
+  
+  stringr::str_replace_all(
+    text,
+    stringr::regex(object_regex, ignore_case = TRUE),
+    replacement = replacement
+  )
+}
+.replace_object <- compiler::cmpfun(.replace_object, options = list(optimize=3))
 
 .check_scale <- function(scale) {
   proper_format <- vapply(
