@@ -522,9 +522,11 @@ semdiff_zeroshot <- function(
 .items_to_norms <- function(
     items,
     model,
+    as_phrases = FALSE,
+    template = NULL,
     prefix = FALSE,
     group_items = FALSE,
-    aggregation = if (prefix) 'cls' else 'mean',
+    aggregation = if (as_phrases) 'cls' else 'mean',
     sep = ', ',
     ...
 ) {
@@ -535,6 +537,16 @@ semdiff_zeroshot <- function(
   concepts <- .extract_concepts(items, c(1, 3), group_items, sep)
   
   concept_names <- concepts
+  
+  if (as_phrases) {
+    if (is.null(template)) template <- 'Y – {}'
+    concepts <- sapply(
+      concepts,
+      function(concept) {
+        stringr::str_replace(template, fixed('{}'), fixed(concept))
+      }
+    )
+  }
   if (prefix) concepts <- paste('classification:', concepts)
   
   concepts_df <- tibble::as_tibble(
