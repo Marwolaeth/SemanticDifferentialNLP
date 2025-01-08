@@ -348,7 +348,7 @@ stem <- compiler::cmpfun(stem, options = list(optimize=3))
     lapply(stem) |>
     sapply(\(w) paste(w, collapse = ' '))
 }
-.stem_each <- compiler::cmpfun(.stem_each_base, options = list(optimize=3))
+.stem_each <- compiler::cmpfun(.stem_each, options = list(optimize=3))
 
 .object_regex <- function(x) {
   .stem_each(x) |>
