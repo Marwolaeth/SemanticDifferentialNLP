@@ -109,6 +109,9 @@ scaleEditorServer <- function(id, i, scales_reactive, container) {
           )
         )
       ))
+      shinyjs::runjs(
+        paste0("Shiny.setInputValue('", ns("add_item"), "', ", "null);")
+      )
     })
     
     ## Удаление характеристик ----
