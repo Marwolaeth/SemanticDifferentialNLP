@@ -3,9 +3,9 @@ source('app/functions.R', encoding = 'UTF-8')
 # Data ----
 texts <- c(
   'Для истинных ценителей моды XCellent представляет собой идеальный выбор, который не поддается массовым трендам.',
-  'Аналитики предполагают, что XCellent сделает шаг вперед, внедрив уникальные решения в свои устройства.'#,
+  'Аналитики предполагают, что XCellent сделает шаг вперед, внедрив уникальные решения в свои устройства.',
   #   'Каждый раз, когда я ношу вещи от XCellent, получаю комплименты от тех, кто разбирается в моде.',
-  #   'Благодаря новым разработкам XCellent, многие компании начинают пересматривать свои стратегии.',
+  'Благодаря новым разработкам XCellent, многие компании начинают пересматривать свои стратегии.'#,
   #   'XCellent стал символом утонченного вкуса, привлекающим только самых взыскательных покупателей.',
   #   'Среди лидеров отрасли, таких как Innovatech и Quantum Systems, XCellent наблюдает за их новыми разработками.',
   #   'Кто-нибудь еще помнит, когда XCellent был на слуху? Кажется, это было давно.'
@@ -32,9 +32,11 @@ scaleset <- list(
 scale <- scaleset[[1]]
 items <- scale
 model <- 'Marwolaeth/rosberta-nli-terra-v0'
+# model <- 'ai-forever/ru-en-RoSBERTa'
 prefix <- TRUE
 object <- c('XCellent', 'наша компания', 'Атлас+', '[BERT]')
 select_token <- 'Y'
+similarity_group_items <- TRUE
 
 # Examples ----
 ## Object Masking ----
@@ -156,3 +158,66 @@ bench_softmax <- microbenchmark::microbenchmark(
   times = 10000L,
   check = 'equal'
 )
+
+## Benchmark Similarity ----
+texts <- c(
+  texts,
+  'XCellent тупой и отсталый',
+  'XCellent — самая инновационная компания в мире.'
+)
+
+(txts <- .replace_object(texts, 'XCellent', 'Y'))
+(template <- .replace_object(template, 'XCellent', 'Y'))
+
+norms2 <- .items_to_norms(
+  items,
+  model,
+  prefix = TRUE,
+  group_items = TRUE
+)
+# norm_embeddings <- norms2
+(mask <- rep(c(-1, 1), length(norms2$texts) / 2))
+
+bs1 <- benchmark_similarity(
+  norms2,
+  model,
+  template,
+  prefix = TRUE,
+  aggregation = 'token',
+  select_token = 'Y'
+)
+bs1
+
+embed_obj <- text_embed(
+  paste('classification:', txts),
+  model,
+  aggregation_from_tokens_to_texts = 'cls',
+  select_token = 'Y',
+  keep_token_embeddings = TRUE
+)
+
+(s1 <- similarity_norm(embed_obj$texts$texts, norms2, metric = 'spearman'))
+
+### Fraction ----
+(score <- s1 / matrix(rep(bs1, length(txts)), byrow = TRUE, nrow = length(txts)))
+
+(score %*% mask) / (length(norms2$texts) / 2)
+
+### Gaussian ----
+pnorm(s1[1,1], mean = bs1[1], sd = .1)
+pnorm(s1[1,2], mean = bs1[1], sd = .1)
+pnorm(s1[1,1], mean = bs1[2], sd = .1)
+pnorm(s1[1,2], mean = bs1[2], sd = .1)
+
+## Scale Norms ----
+tic()
+scaleset_norms <- purrr::map(
+  scaleset,
+  .items_to_norms,
+  model = model,
+  prefix = prefix,
+  aggregation = if (prefix) 'cls' else 'mean'
+)
+toc()
+str(scaleset_norms, 2)
+
