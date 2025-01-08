@@ -282,9 +282,6 @@ server <- function(input, output, session) {
     glue::glue('{universal_brand_name} – {{}}')
   })
   
-  ### Результат
-  result <- reactiveVal()
-  
   ### Случайный пример ----
   observeEvent(input$example, {
     ex <- dplyr::slice_sample(examples, n = 1) |>
@@ -313,7 +310,7 @@ server <- function(input, output, session) {
   })
   
   ### Анализ ----
-  observeEvent(input$submit, {
+  result <- reactive({
     req(input$object)
     req(input$model)
     req(input$text)
@@ -371,8 +368,11 @@ server <- function(input, output, session) {
       })
     tictoc::toc()
     
-    result(res)
-  })
+    res
+  }) |>
+    bindCache(input$model, input$text, scaleset()) |>
+    bindEvent(input$submit)
+    
   
   ## Вывод ----
   output$result <- renderPrint({
