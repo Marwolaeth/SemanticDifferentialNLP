@@ -149,11 +149,31 @@ ui <- dashboardPage(
       tabItem(
         tabName = 'settings',
         h2('Редактирование семантических шкал'),
+        ##### Экспорт и импорт ----
+        fluidRow(
+          column(
+            6,
+            downloadButton(
+              'download_scaleset',
+              'Экспортировать шкалы',
+              class = 'btn-success'
+            )
+          ),
+          column(
+            6,
+            fileInput(
+              'upload_scaleset',
+              'Импортировать шкалы',
+              accept = '.RData')
+          )
+        ),
+        ##### Редактирование ----
         tabsetPanel(
           tabPanel(
             'Редактирование',
             value = 'edit-scales',
             uiOutput('scale_inputs'),
+            ##### Добавить и Сохранить ----
             fluidRow(
               column(
                 6,
@@ -174,6 +194,7 @@ ui <- dashboardPage(
               )
             )
           ),
+          ##### Предпросмотр ----
           tabPanel(
             'Предпросмотр',
             value = 'edit-scales-preview',
@@ -414,7 +435,7 @@ server <- function(input, output, session) {
   })
   
   ## Редактирование шкал ----
-  # Хранение шкал
+  ### Исходная шкала ----
   scaleset <- reactiveVal(
     list(
       'Инновационность' = list(
@@ -434,6 +455,30 @@ server <- function(input, output, session) {
       )
     )
   )
+  
+  ### Экспорт и импорт ----
+  output$download_scaleset <- downloadHandler(
+    filename = function() {
+      paste('scaleset', Sys.Date(), '.RData', sep = '-')
+    },
+    content = function(file) {
+      scaleset <- scaleset()
+      save(scaleset, file = file)
+    }
+  )
+  observeEvent(input$upload_scaleset, {
+    req(input$upload_scaleset)
+    
+    # Load the RData file and update the scaleset
+    scales_data <- new.env()
+    load(input$upload_scaleset$datapath, envir = scales_data)
+    
+    # Assuming the scaleset is stored as a list in the RData file
+    scaleset(get(ls(scales_data)[1], envir = scales_data))
+  })
+  
+  
+  ### Редактирование ----
   new_scaleset <- reactiveVal()
   
   output$scale_inputs <- renderUI({
