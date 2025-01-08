@@ -35,7 +35,13 @@ ui <- dashboardPage(
     sidebarMenu(
       menuItem('Оценка', tabName = 'assessment', icon = icon('check')),
       menuItem(
-        'Настройки шкал', tabName = 'settings', icon = icon('sliders'))
+        'Настройки шкал', tabName = 'settings', icon = icon('sliders')
+      ),
+      menuItem(
+        'Настройки оценщиков',
+        tabName = 'method-settings',
+        icon = icon('magnifying-glass-chart')
+      )
     )
   ),
   
@@ -146,7 +152,7 @@ ui <- dashboardPage(
         tabsetPanel(
           tabPanel(
             'Редактирование',
-            value = 'edit_scales',
+            value = 'edit-scales',
             uiOutput('scale_inputs'),
             fluidRow(
               column(
@@ -170,8 +176,55 @@ ui <- dashboardPage(
           ),
           tabPanel(
             'Предпросмотр',
-            value = 'edit_scales_preview',
+            value = 'edit-scales-preview',
             verbatimTextOutput('scales_output')
+          )
+        )
+      ),
+      #### Настройка оценщиков ----
+      tabItem(
+        tabName = 'method-settings',
+        h2('Настройка оценщиков'),
+        ##### NLI ----
+        tabsetPanel(
+          tabPanel(
+            'Классификация',
+            value = 'edit-classification',
+          ),
+          ##### Similarity ----
+          tabPanel(
+            'Семантическая близость',
+            value = 'edit-similarity',
+            checkboxInput(
+              'similarity_group_items',
+              label = 'Объединять элементы шкалы в одну фразу',
+              value = FALSE
+            ),
+            radioButtons(
+              'similarity_aggregation',
+              label = 'Метод агрегирования',
+              choices = c(
+                'Автоматически'       = 'auto',
+                'CLS-токен'           = 'cls',
+                'Среднее по токенам'  = 'mean',
+                'Минимум по токенам'  = 'min',
+                'Максимум по токенам' = 'max'
+              )
+            ),
+            radioButtons(
+              'similarity_metric',
+              label = 'Метрика расстояния',
+              choices = c(
+                'Косинусная близость / Корреляция Пирсона' = 'cosine',
+                'Корреляция Спирмена' = 'spearman'
+              ),
+              width = '80%'
+            )
+          ),
+          ##### LLM ----
+          tabPanel(
+            'Искусственный интеллект',
+            value = 'edit-llm'
           )
         )
       )
@@ -249,6 +302,14 @@ server <- function(input, output, session) {
       'text',
       value = ex
     )
+  })
+  
+  ### Нормы ----
+  scaleset_norms <- reactive({
+    req(input$method == 'similarity')
+    req(input$model)
+    req(scaleset())
+    if (is.null(scaleset_norms())) print('Ok, I’m NULL.')
   })
   
   ### Анализ ----
