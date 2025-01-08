@@ -31,8 +31,8 @@ scaleset <- list(
 )
 scale <- scaleset[[1]]
 items <- scale
-model <- 'Marwolaeth/rosberta-nli-terra-v0'
-# model <- 'ai-forever/ru-en-RoSBERTa'
+# model <- 'Marwolaeth/rosberta-nli-terra-v0'
+model <- 'ai-forever/ru-en-RoSBERTa'
 prefix <- TRUE
 object <- c('XCellent', 'наша компания', 'Атлас+', '[BERT]')
 select_token <- 'Y'
@@ -163,7 +163,9 @@ bench_softmax <- microbenchmark::microbenchmark(
 texts <- c(
   texts,
   'XCellent тупой и отсталый',
-  'XCellent — самая инновационная компания в мире.'
+  'XCellent — самая инновационная компания в мире.',
+  'Umbrella очень инновационная компания.',
+  'Umbrella очень инновационная компания, а XCellent отстает в развитии.'
 )
 
 (txts <- .replace_object(texts, 'XCellent', 'Y'))
@@ -191,7 +193,7 @@ bs1
 embed_obj <- text_embed(
   paste('classification:', txts),
   model,
-  aggregation_from_tokens_to_texts = 'cls',
+  aggregation_from_tokens_to_texts = 'token',
   select_token = 'Y',
   keep_token_embeddings = TRUE
 )
@@ -208,6 +210,128 @@ pnorm(s1[1,1], mean = bs1[1], sd = .1)
 pnorm(s1[1,2], mean = bs1[1], sd = .1)
 pnorm(s1[1,1], mean = bs1[2], sd = .1)
 pnorm(s1[1,2], mean = bs1[2], sd = .1)
+
+### Hypothesis Similarity ----
+(concepts <- names(norms2$texts))
+
+hypotheses <- sapply(
+  concepts,
+  function(concept) {
+    paste(
+      'classification:',
+      stringr::str_replace(template, fixed('{}'), fixed(concept))
+    )
+  }
+) |>
+  as.list() |>
+  tibble::as_tibble()
+hypotheses
+hypotheses_embeddings <- text_embed(
+  texts = hypotheses,
+  model = model,
+  aggregation_from_tokens_to_texts = 'cls'
+)
+embed_cls <- text_embed(
+  paste('classification:', txts),
+  model,
+  aggregation_from_tokens_to_texts = 'cls'
+)
+(s1 <- similarity_norm(
+  embed_cls$texts$texts, hypotheses_embeddings, metric = 'spearman')
+)
+
+tic()
+norms3 <- .items_to_norms(
+  items,
+  model,
+  prefix = TRUE,
+  group_items = TRUE,
+  as_phrases = TRUE,
+  template = 'Кажется, что Y {}'
+)
+toc()
+
+similarity_norm(embed_cls$texts$texts, norms3, metric = 'spearman') |>
+  apply(1, softmax)
+
+similarity_norm(embed_obj$texts$texts, norms3, metric = 'spearman') |> softmax()
+
+txts <- examples$sentence |>
+  .replace_object('Xcellent', 'Y')
+
+tic()
+embed_cls <- text_embed(
+  paste('classification:', txts),
+  model,
+  aggregation_from_tokens_to_texts = 'cls'
+)
+toc()
+save(embed_cls, file = 'data/example-embeddings-cls.RData')
+
+s <- similarity_norm(embed_cls$texts$texts, norms3, metric = 'spearman')
+examples$similarity_backward <- s[, 1]
+examples$similarity_innovative <- s[, 2]
+
+examples |>
+  filter(feature == 'Инновационность') |>
+  group_by(rating) |>
+  summarise(across(starts_with('similarity'), c(mean = mean, sd = sd)))
+
+df <- examples |>
+  dplyr::select(rating, starts_with('similarity')) |>
+  pivot_longer(
+    starts_with('similarity'), names_to = 'item', values_to = 'score'
+  ) |>
+  mutate(item = str_remove(item, fixed('similarity_')))
+
+library(ggplot2)
+df |>
+  ggplot(aes(x = score, fill = item)) +
+  geom_density() +
+  facet_grid(rows = vars(rating)) +
+  theme_minimal()
+
+df |>
+  ggplot(aes(x = score)) +
+  geom_density() +
+  facet_grid(rows = vars(rating)) +
+  theme_minimal()
+
+x <- df |>
+  filter(rating < 1) |>
+  pull(score)
+
+hist(x)
+shapiro.test(x)
+
+library(fitdistrplus)
+
+fit <- fitdistrplus::fitdist(x, 'norm')
+fit
+fit$estimate
+save(fit, file = 'data/fit-norm-cls-spearman.RData')
+
+scale_score <- function(x) {
+  (x - fit$estimate['mean']) / fit$estimate['sd']
+}
+
+examples$score_backward_norm <- NULL
+examples$score_innovative_norm <- NULL
+examples$score_backward <- scale_score(examples$similarity_backward)
+examples$score_innovative <- scale_score(examples$similarity_innovative)
+examples$score <- examples$score_innovative - examples$score_backward
+examples$score_p <- pnorm(examples$score) - .5
+
+examples |>
+  filter(feature == 'Инновационность') |>
+  group_by(rating) |>
+  summarise(across(score_p, c(mean = mean, sd = sd)))
+
+examples |>
+  filter(feature == 'Инновационность') |>
+  ggplot(aes(x = score_p, fill = factor(rating))) +
+  geom_density() +
+  theme_minimal()
 
 ## Scale Norms ----
 tic()
