@@ -312,7 +312,8 @@ fit$estimate
 save(fit, file = 'data/fit-norm-cls-spearman.RData')
 
 scale_score <- function(x) {
-  (x - fit$estimate['mean']) / fit$estimate['sd']
+  # (x - fit$estimate['mean']) / fit$estimate['sd']
+  (x - .6) / 0.04
 }
 
 examples$score_backward_norm <- NULL
@@ -325,13 +326,36 @@ examples$score_p <- pnorm(examples$score) - .5
 examples |>
   filter(feature == 'Инновационность') |>
   group_by(rating) |>
-  summarise(across(score_p, c(mean = mean, sd = sd)))
+  summarise(
+    across(c(score, score_p), c(mean = mean, sd = sd, max = max, min = min))
+  )
 
 examples |>
   filter(feature == 'Инновационность') |>
   ggplot(aes(x = score_p, fill = factor(rating))) +
   geom_density() +
   theme_minimal()
+
+x <- examples |>
+  filter(rating > 0) |>
+  pull(similarity_backward)
+
+y <- examples |>
+  filter(rating < 1) |>
+  pull(similarity_innovative)
+
+hist(x)
+shapiro.test(x)
+hist(y)
+shapiro.test(y)
+
+library(fitdistrplus)
+
+fit_negative <- fitdistrplus::fitdist(x, 'norm')
+fit_negative
+fit_positive <- fitdistrplus::fitdist(y, 'norm')
+fit_positive
+save(fit_positive, fit_negative, file = 'data/fit-norm-cls-spearman-all.RData')
 
 ## Scale Norms ----
 tic()
