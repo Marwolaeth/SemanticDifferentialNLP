@@ -505,26 +505,34 @@ semdiff_zeroshot <- function(
     dplyr::pull(score)
 }
 
+.extract_concepts <- function(items, ids, group = FALSE, sep = ', ') {
+  concepts <- lapply(items, names) |>
+    purrr::map(\(item) item[ids])
+  if (group) {
+    concepts <- concepts |>
+      purrr::pmap_chr(paste, sep = sep)
+  } else {
+    concepts <- unlist(concepts)
+  }
+  
+  return(concepts)
+}
+.extract_concepts <- compiler::cmpfun(.extract_concepts, options = list(optimize=3))
+
 .items_to_norms <- function(
     items,
     model,
     prefix = FALSE,
     group_items = FALSE,
     aggregation = if (prefix) 'cls' else 'mean',
+    sep = ', ',
     ...
 ) {
   if (!is.list(items)) items <- list(items)
   
   .check_scale(items)
   
-  concepts <- lapply(items, names) |>
-    purrr::map(\(item) item[c(1, 3)])
-  if (group_items) {
-     concepts <- concepts |>
-      purrr::pmap_chr(paste)
-  } else {
-    concepts <- unlist(concepts)
-  }
+  concepts <- .extract_concepts(items, c(1, 3), group_items, sep)
   
   concept_names <- concepts
   if (prefix) concepts <- paste('classification:', concepts)
@@ -569,6 +577,44 @@ similarity_norm <- function(
   return(S)
 }
 similarity_norm <- compiler::cmpfun(similarity_norm, options = list(optimize=3))
+
+benchmark_similarity <- function(
+    norm_embeddings,
+    model,
+    template,
+    prefix = FALSE,
+    aggregation = if (prefix) 'cls' else 'token',
+    metric = c('cosine', 'spearman'),
+    ...
+) {
+  concepts <- names(norm_embeddings$texts)
+  
+  hypotheses <- sapply(
+    concepts,
+    function(concept) {
+      stringr::str_replace(template, fixed('{}'), fixed(concept))
+    }
+  )
+  
+  if (prefix) hypotheses <- paste('classification:', hypotheses)
+  
+  hypotheses_embeddings <- text_embed(
+    hypotheses,
+    model,
+    aggregation_from_tokens_to_texts = aggregation,
+    ...
+  )
+  
+  score <- diag(
+    similarity_norm(
+      hypotheses_embeddings$texts$texts,
+      norm_embeddings,
+      metric = metric
+    )
+  )
+  names(score) <- concepts
+  return(score)
+}
 
 ### Wrapper Functions ----
 # Функция для обработки нескольких текстов с нулевым обучением
