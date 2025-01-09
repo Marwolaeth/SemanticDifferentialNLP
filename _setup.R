@@ -2,7 +2,10 @@ if (!require(devtools)) {
   install.packages('devtools', type = 'source', INSTALL_opts = '--byte-compile')
 }
 devtools::install_github(
-  'OscarKjell/text',
+  c(
+    'OscarKjell/text',
+    'rossellhayes/and'
+  ),
   build = TRUE
 )
 
