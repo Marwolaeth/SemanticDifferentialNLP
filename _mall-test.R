@@ -317,3 +317,77 @@ pred_metrics(
   estimate = innovative_hat_bert,
   na_rm = TRUE
 )
+
+## Scaleset ----
+source('app/functions.R', encoding = 'UTF-8')
+scaleset <- list(
+  'Инновационность' = list(
+    c('устаревший' = -1, 'сдержанный' = 0, 'инновационный'   = 1),
+    c('отсталый'   = -1, 'стабильный' = 0, 'изобретательный' = 1)
+  ),
+  'Популярность' = list(
+    c('немодный'      = -1, 'адекватный'    = 0, 'модный'     = 1),
+    c('неактуальный'  = -1, 'специфический' = 0, 'молодежный' = 1),
+    c('непопулярный'  = -1, 'известный'     = 0, 'популярный' = 1),
+    c('малоизвестный' = -1, 'элитарный'     = 0, 'знаменитый' = 1)
+  ),
+  'Надежность' = list(
+    c('ненадежный'     = -1, 'нормальный'  = 0, 'надежный'     = 1),
+    c('некачественный' = -1, 'обычный'     = 0, 'качественный' = 1),
+    c('хлипкий'        = -1, 'стандартный' = 0, 'прочный'      = 1)
+  )
+)
+scale <- scaleset[[1]]
+items <- scale
+
+texts <- c(
+  'Для истинных ценителей моды XCellent представляет собой идеальный выбор, который не поддается массовым трендам.',
+  'Аналитики предполагают, что XCellent сделает шаг вперед, внедрив уникальные решения в свои устройства.',
+  'Благодаря новым разработкам XCellent, многие компании начинают пересматривать свои стратегии.',
+  'XCellent тупой и отсталый',
+  'XCellent — самая инновационная компания в мире.',
+  'Umbrella очень инновационная компания.',
+  'Umbrella очень инновационная компания, а XCellent отстает в развитии.'
+)
+
+(txts <- .replace_object(texts, 'XCellent', 'Y'))
+(template <- .replace_object(template, 'XCellent', 'Y'))
+
+(terms <- c(
+  names(scaleset),
+  purrr::map(scaleset, \(s) purrr::map(s, names)) |> unlist()
+))
+
+# Helsinki-NLP/opus-mt-ru-en # Ok
+# Gopal1853/Gopal-finetuned-custom-ru-to-en # Not Ok
+# utrobinmv/t5_translate_en_ru_zh_small_1024
+term_translations <- text::textTranslate(
+  terms,
+  source_lang = 'ru',
+  target_lang = 'en',
+  model = 'Helsinki-NLP/opus-mt-ru-en'
+)
+
+library(polyglotr)
+tic()
+create_translation_table(terms, 'en')
+toc()
+
+# Awful
+tic()
+purrr::map_chr(terms, \(t) mymemory_translate(t, 'en', 'ru'))
+toc()
+
+# Good but slow
+tic()
+pons_translate(terms, 'en', 'ru')
+toc()
+
+# Not Ok
+tic()
+purrr::map_chr(terms, \(t) wmcloud_translate(t, 'en', 'ru'))
+toc()
+
+tic()
+google_translate(terms, 'en', 'ru')
+toc()
