@@ -1,0 +1,235 @@
+library(shiny)
+library(flexdashboard)
+library(shinydashboard)
+library(shinydashboardPlus)
+
+## UI ----
+ui <- dashboardPage(
+  title = 'Brand Semantics',
+  skin = 'red',
+  
+  header = dashboardHeader(title = 'Brand Semantics', titleWidth = '25%'),
+  
+  ### Боковая панель ----
+  sidebar = dashboardSidebar(
+    width = '30%',
+    sidebarMenu(
+      menuItem('Оценка', tabName = 'assessment', icon = icon('check')),
+      menuItem(
+        'Настройки шкал', tabName = 'settings', icon = icon('sliders')
+      ),
+      menuItem(
+        'Настройки оценщиков',
+        tabName = 'method-settings',
+        icon = icon('magnifying-glass-chart')
+      )
+    )
+  ),
+  
+  ### Панель настроек ----
+  controlbar = dashboardControlbar(
+    width = 450,
+    tags$div(
+      style = 'margin:10px;',
+      radioButtons(
+        'method',
+        label = 'Метод оценки',
+        choices = list(
+          'Классификация' = 'classification',
+          'Семантическая близость' = 'similarity',
+          'Искусственный интеллект' = 'llm'
+        ),
+        selected = 'classification'
+      ),
+      uiOutput('model'),
+      radioButtons(
+        'device',
+        label = 'Устройство',
+        choices = c('CPU', 'GPU'),
+        selected = 'CPU'
+      ),
+      numericInput(
+        'seed',
+        label = 'Начальное случайное значение',
+        min = 1,
+        max = 11111,
+        value = 111
+      )
+    )
+  ),
+  
+  ### Основная панель ----
+  body = dashboardBody(
+    useShinyjs(),
+    
+    tabItems(
+      #### Интерфейс оценки ----
+      tabItem(
+        tabName = 'assessment',
+        ##### Ввод ----
+        fluidRow(
+          column(
+            12,
+            fluidRow(
+              column(
+                8,
+                textInput(
+                  'object',
+                  'Объект оценки',
+                  value = 'Umbrella',
+                  width = '100%',
+                  placeholder = paste(
+                    'Объекты через запятую, например:',
+                    '«Бренд А, наша компания, мы»'
+                  )
+                )
+              ),
+              column(
+                4,
+                actionButton(
+                  'example', 'Случайный пример', class = 'btn-warning',
+                  style = 'margin-top:25px;'
+                )
+              )
+            ),
+            textAreaInput(
+              'text',
+              'Текст:',
+              '',
+              rows = 5,
+              resize = 'vertical',
+              width = '100%'
+            ),
+            actionButton(
+              'submit',
+              'Оценить',
+              class = 'btn-success',
+              icon = icon('check-double')
+            )
+          )
+        ),
+        ##### Вывод ----
+        fluidRow(
+          style = 'padding:10px;',
+          tabsetPanel(
+            id = 'scales_output',
+            tabPanel(
+              'Результат',
+              value = 'scales_output_visual',
+              fluidRow(uiOutput('gauges')),
+            ),
+            tabPanel(
+              'Просмотр расчетов',
+              value = 'scales_output_raw',
+              verbatimTextOutput('result')
+            )
+          )
+        )
+      ),
+      #### Настройка шкал ----
+      tabItem(
+        tabName = 'settings',
+        h2('Редактирование семантических шкал'),
+        ##### Экспорт и импорт ----
+        fluidRow(
+          column(
+            6,
+            downloadButton(
+              'download_scaleset',
+              'Экспортировать шкалы',
+              class = 'btn-success'
+            )
+          ),
+          column(
+            6,
+            fileInput(
+              'upload_scaleset',
+              'Импортировать шкалы',
+              accept = '.RData')
+          )
+        ),
+        ##### Редактирование ----
+        tabsetPanel(
+          tabPanel(
+            'Редактирование',
+            value = 'edit-scales',
+            uiOutput('scale_inputs'),
+            ##### Добавить и Сохранить ----
+            fluidRow(
+              column(
+                6,
+                actionButton(
+                  'add_scale',
+                  'Добавить шкалу',
+                  class = 'btn-primary'
+                )
+              ),
+              column(
+                6,
+                style='text-align:right;',
+                actionButton(
+                  'submit_scales',
+                  'Сохранить',
+                  class = 'btn-success'
+                )
+              )
+            )
+          ),
+          ##### Предпросмотр ----
+          tabPanel(
+            'Предпросмотр',
+            value = 'edit-scales-preview',
+            verbatimTextOutput('scales_output')
+          )
+        )
+      ),
+      #### Настройка оценщиков ----
+      tabItem(
+        tabName = 'method-settings',
+        h2('Настройка оценщиков'),
+        ##### NLI ----
+        tabsetPanel(
+          tabPanel(
+            'Классификация',
+            value = 'edit-classification',
+          ),
+          ##### Similarity ----
+          tabPanel(
+            'Семантическая близость',
+            value = 'edit-similarity',
+            checkboxInput(
+              'similarity_group_items',
+              label = 'Объединять элементы шкалы в одну фразу',
+              value = FALSE
+            ),
+            radioButtons(
+              'similarity_aggregation',
+              label = 'Метод агрегирования',
+              choices = c(
+                'Автоматически'       = 'auto',
+                'CLS-токен'           = 'cls',
+                'Среднее по токенам'  = 'mean',
+                'Минимум по токенам'  = 'min',
+                'Максимум по токенам' = 'max'
+              )
+            ),
+            radioButtons(
+              'similarity_metric',
+              label = 'Метрика расстояния',
+              choices = c(
+                'Косинусная близость / Корреляция Пирсона' = 'cosine',
+                'Корреляция Спирмена' = 'spearman'
+              ),
+              width = '80%'
+            )
+          ),
+          ##### LLM ----
+          tabPanel(
+            'Искусственный интеллект',
+            value = 'edit-llm'
+          )
+        )
+      )
+    )
+  )
+)
