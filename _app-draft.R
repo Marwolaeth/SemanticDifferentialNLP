@@ -32,7 +32,8 @@ scaleset <- list(
 scale <- scaleset[[1]]
 items <- scale
 # model <- 'Marwolaeth/rosberta-nli-terra-v0'
-model <- 'ai-forever/ru-en-RoSBERTa'
+# model <- 'ai-forever/ru-en-RoSBERTa'
+model <- 'MoritzLaurer/ernie-m-base-mnli-xnli'
 prefix <- TRUE
 object <- c('XCellent', 'наша компания', 'Атлас+', '[BERT]')
 select_token <- 'Y'
@@ -268,7 +269,7 @@ embed_cls <- text_embed(
 toc()
 save(embed_cls, file = 'data/example-embeddings-cls.RData')
 
-s <- similarity_norm(embed_cls$texts$texts, norms3, metric = 'spearman')
+(s <- similarity_norm(embed_cls$texts$texts, norms3, metric = 'spearman'))
 examples$similarity_backward <- s[, 1]
 examples$similarity_innovative <- s[, 2]
 
@@ -276,6 +277,75 @@ examples |>
   filter(feature == 'Инновационность') |>
   group_by(rating) |>
   summarise(across(starts_with('similarity'), c(mean = mean, sd = sd)))
+
+df <- examples |>
+  mutate(score = similarity_innovative - similarity_backward)
+
+df |>
+  filter(feature == 'Инновационность') |>
+  group_by(rating) |>
+  summarise(
+    mean = mean(score), sd = sd(score), min = min(score), max = max(score)
+  )
+
+x <- df |>
+  filter(feature != 'Инновационность' | rating < 1) |>
+  pull(score)
+
+hist(x)
+shapiro.test(x) # Not Normal
+
+hist(scale(x))
+shapiro.test(scale(x))
+
+df <- df |>
+  mutate(
+    score_scale = (score - mean(x)) / sd(x),
+    score_p = pnorm(score_scale, sd = .07) - .5
+  )
+
+df |>
+  filter(feature == 'Инновационность') |>
+  group_by(rating) |>
+  summarise(
+    mean = mean(score_scale),
+    sd = sd(score_scale),
+    min = min(score_scale),
+    max = max(score_scale)
+  )
+
+df |>
+  filter(feature == 'Инновационность') |>
+  group_by(rating) |>
+  summarise(
+    mean = mean(score_p),
+    sd = sd(score_p),
+    min = min(score_p),
+    max = max(score_p)
+  )
+
+x_stats <- replicate(
+  10000,
+  {
+    y <- sample(x, length(x), replace = TRUE)
+    tibble(
+      lower = quantile(y, .025),
+      mean = mean(y),
+      median = median(y),
+      upper = quantile(y, .975)
+    )
+  },
+  simplify = FALSE
+)
+str(x_stats)
+x_stats |>
+  bind_rows() |>
+  summarise(
+    across(
+      everything(),
+      c(mean = mean, median = median)
+    )
+  )
 
 df <- examples |>
   dplyr::select(rating, starts_with('similarity')) |>
@@ -358,14 +428,132 @@ fit_positive
 save(fit_positive, fit_negative, file = 'data/fit-norm-cls-spearman-all.RData')
 
 ## Scale Norms ----
+### CLS ----
 tic()
-scaleset_norms <- purrr::map(
-  scaleset,
-  .items_to_norms,
-  model = model,
+norm_embeddings <- .items_to_norms(
+  items,
+  model,
+  as_phrases = prefix,
+  template = template,
   prefix = prefix,
-  aggregation = if (prefix) 'cls' else 'mean'
+  group_items = similarity_group_items,
+  aggregation = 'cls'
 )
 toc()
-str(scaleset_norms, 2)
+
+(txt <- paste(txts[2], txts[3]))
+(txt <- 'Y абсолютно отсталая контора. Она совсем не развивается.')
+(sents <- sentences(txt))
+
+if (prefix) sents <- paste('classification:', sents)
+
+tic()
+text_embeddings <- text_embed(
+  sents,
+  model,
+  aggregation_from_tokens_to_texts = 'cls'
+)
+toc()
+
+textEmbed(
+  sents, model = model, remove_non_ascii = FALSE, layers = -1,
+  max_token_to_sentence = 20 
+)
+textEmbed('Ха-ха', model = model, remove_non_ascii = FALSE, layers = -1)
+
+(n_items <- length(norm_embeddings$texts))
+(n_comparisons <- n_items / 2)
+
+(mask <- rep(c(-1, 1), n_comparisons))
+
+(s <- similarity_norm(text_embeddings$texts$texts, norm_embeddings))
+
+(s <- apply(s, 2, max))
+
+((s %*% mask) / n_comparisons) * 6.6
+
+### Token ----
+tic()
+norm_embeddings <- .items_to_norms(
+  items,
+  model,
+  as_phrases = FALSE,
+  template = template,
+  prefix = FALSE,
+  group_items = similarity_group_items,
+  aggregation = 'mean'
+)
+toc()
+
+(txt <- paste(txts[2], txts[3]))
+(txt <- 'Y абсолютно отсталая контора. Она совсем не развивается.')
+(sents <- sentences(txt))
+
+if (prefix) sents <- paste('classification:', sents)
+
+tic()
+text_embeddings <- text_embed(
+  sents,
+  model,
+  aggregation_from_tokens_to_texts = 'token',
+  select_token = select_token
+)
+toc()
+
+(n_items <- length(norm_embeddings$texts))
+(n_comparisons <- n_items / 2)
+
+(mask <- rep(c(-1, 1), n_comparisons))
+
+(s <- similarity_norm(text_embeddings$texts$texts, norm_embeddings))
+
+(s <- apply(s, 2, max))
+
+score <- ((s %*% mask) / n_comparisons)[1]
+
+tibble::tibble(
+  items = paste(names(norm_embeddings$texts), collapse = ' – '),
+  .score = score
+)
+
+tic()
+scaleset_norms <- purrr::map2(
+  scaleset,
+  seq_along(scaleset),
+  function(semantic_scale, i) {
+    scale_result <- .items_to_norms(
+      items = semantic_scale,
+      model = model,
+      as_phrases = TRUE,
+      template = template,
+      prefix = prefix,
+      group_items = similarity_group_items,
+      aggregation = 'cls',
+      device = 'cpu'
+    )
+    return(scale_result)
+  }
+) |>
+  purrr::set_names(names(scaleset))
+toc()
+
+tic()
+purrr::map2(
+  scaleset,
+  seq_along(scaleset),
+  function(semantic_scale, i) {
+      semdiff_similarity(
+        sentences = sentences(txt),
+        model = model,
+        norm_embeddings = scaleset_norms[[i]],
+        prefix = prefix,
+        aggregation = 'cls',
+        select_token = universal_brand_name,
+        similarity_metric = 'cosine',
+        device = 'cpu'
+      )
+    }
+) |>
+  purrr::set_names(names(scaleset))
+toc()
 

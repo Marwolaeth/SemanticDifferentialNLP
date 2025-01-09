@@ -72,8 +72,56 @@ server <- function(input, output, session) {
     req(input$method == 'similarity')
     req(input$model)
     req(scaleset())
-    if (is.null(scaleset_norms())) print('Ok, I’m NULL.')
-  })
+    
+    model_name <- names(models()[as.numeric(input$model)])
+    print(model_name)
+    
+    if (input$similarity_aggregation %in% c('auto', 'token')) {
+      aggregation <- ifelse(prefix(), 'cls', 'mean')
+    } else {
+      aggregation <- input$similarity_aggregation
+    }
+    
+    as_phrases <- (aggregation == 'cls')
+    
+    tictoc::tic()
+    withProgress(
+      session = session,
+      message = 'Векторизация шкал…',
+      {
+        res <- purrr::map2(
+          scaleset(),
+          seq_along(scaleset()),
+          function(semantic_scale, i) {
+            incProgress(
+              1 / length(scaleset()),
+              message = 'Векторизация шкалы',
+              detail = names(scaleset())[[i]]
+            )
+            scale_result <- .items_to_norms(
+              items = semantic_scale,
+              model = model_name,
+              as_phrases = as_phrases,
+              template = hypotheses(),
+              prefix = prefix(),
+              group_items = input$similarity_group_items,
+              aggregation = aggregation,
+              device = tolower(input$device)
+            )
+            return(scale_result)
+          }
+        ) |>
+          purrr::set_names(names(scaleset()))
+      })
+    tictoc::toc()
+    res
+  }) |>
+    bindCache(
+      input$model,
+      input$similarity_aggregation,
+      input$similarity_group_items,
+      scaleset()
+    )
   
   ### Анализ ----
   result <- reactive({
@@ -117,16 +165,36 @@ server <- function(input, output, session) {
               message = 'Анализируем',
               detail = names(scaleset())[[i]]
             )
-            scale_result <- semdiff_zeroshot_map(
-              text,
-              model_name,
-              items = semantic_scale,
-              template = hypotheses(),
-              prefix = prefix(),
-              append_neutral = TRUE,
-              seed = input$seed,
-              device = tolower(input$device)
-            )
+            ##### NLI ----
+            if (input$method == 'classification') {
+              scale_result <- semdiff_zeroshot_map(
+                text,
+                model_name,
+                items = semantic_scale,
+                template = hypotheses(),
+                prefix = prefix(),
+                append_neutral = TRUE,
+                seed = input$seed,
+                device = tolower(input$device)
+              ) 
+            ##### Similarity ----
+            } else if (input$method == 'similarity') {
+              if (input$similarity_aggregation == 'auto') {
+                aggregation <- ifelse(prefix(), 'cls', 'token')
+              } else {
+                aggregation <- input$similarity_aggregation
+              }
+              scale_result <- semdiff_similarity(
+                sentences = sentences(text),
+                model = model_name,
+                norm_embeddings = scaleset_norms()[[i]],
+                prefix = prefix(),
+                aggregation = aggregation,
+                select_token = universal_brand_name,
+                similarity_metric = input$similarity_metric,
+                device = tolower(input$device)
+              )
+            }
             return(scale_result)
           }
         ) |>
@@ -136,15 +204,19 @@ server <- function(input, output, session) {
     
     res
   }) |>
-    bindCache(input$model, input$text, scaleset()) |>
+    bindCache(input$model, input$text, scaleset(), input$method) |>
     bindEvent(input$submit)
     
   
   ## Вывод ----
   output$result <- renderPrint({
     req(input$submit)
-    result() |>
-      show_scales_result()
+    if (input$method == 'classification') {
+      result() |>
+        show_scales_result()
+    } else {
+      result()
+    }
   })
   
   output$gauges <- renderUI({

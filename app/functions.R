@@ -94,7 +94,7 @@ text_embed_raw <- function(
     tokenizer_parallelism = FALSE,
     trust_remote_code = TRUE,
     logging_level = 'error',
-    max_token_to_sentence = 4
+    max_token_to_sentence = 30
 ) {
   layers <- get_number_of_hidden_layers(
     model,
@@ -154,9 +154,9 @@ text_embed_raw <- function(
     stop('`select_token` must be either numeric (integer) or character.')
   }
   
-  if (nrow(embeddings) == 0) {
-    stop('No relevant tokens found.')
-  }
+  # if (nrow(embeddings) == 0) {
+  #   stop('No relevant tokens found.')
+  # }
   
   return(embeddings)
 }
@@ -742,39 +742,48 @@ semdiff_zeroshot_map <- function(
 }
 
 semdiff_similarity <- function(
-    texts,
+    sentences,
     model,
     norm_embeddings,
     prefix = FALSE,
     aggregation = if (prefix) 'cls' else 'token',
     select_token = NULL,
+    similarity_metric = 'cosine',
     ...
 ) {
-  if (!is.list(items)) items <- list(items)
+
+  if (prefix) texts <- paste('classification:', texts)
   
-  .check_scale(items)
-  
-  items <- do.call(cbind, lapply(items, t))
-  concepts <- colnames(items)
-  
-  if (prefix) {
-    texts    <- paste('classification:', texts)
-    concepts <- paste('classification:', concepts)
-  }
-  
-  concepts_df <- tibble::as_tibble(
-    as.list(concepts) |> setNames(colnames(items))
+  text_embeddings <- text_embed(
+    sentences,
+    model,
+    aggregation_from_tokens_to_texts = aggregation,
+    select_token = select_token,
+    ...
   )
   
-  concept_embeds <- textEmbed(
-    concepts_df,
-    model = model,
-    layers = -1,
-    # keep_token_embeddings = FALSE,
-    # decontextualize = TRUE,
-    aggregation_from_tokens_to_texts = 'mean',
-    trust_remote_code = TRUE,
-    remove_non_ascii = FALSE
+  # Number of differential items un the scale
+  n_items <- length(norm_embeddings$texts)
+  
+  # Number of item pairs
+  n_comparisons <- n_items / 2
+  
+  # Summation pattern
+  mask <- rep(c(-1, 1), n_comparisons)
+  
+  similarity_matrix <- similarity_norm(
+    text_embeddings$texts$texts,
+    norm_embeddings,
+    metric = similarity_metric
+  )
+  
+  max_bipolar_scores <- apply(similarity_matrix, 2, max)
+  
+  score <- ((max_bipolar_scores %*% mask) / n_comparisons)[1]
+  
+  tibble::tibble(
+    items = paste(names(norm_embeddings$texts), collapse = ' – '),
+    .score = score
   )
 }
 
