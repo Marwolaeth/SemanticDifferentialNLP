@@ -135,7 +135,8 @@ ui <- dashboardPage(
             downloadButton(
               'download_scaleset',
               'Экспортировать шкалы',
-              class = 'btn-success'
+              class = 'btn-success',
+              style = 'margin-top:25px;'
             )
           ),
           column(
@@ -143,7 +144,10 @@ ui <- dashboardPage(
             fileInput(
               'upload_scaleset',
               'Импортировать шкалы',
-              accept = '.RData')
+              accept = c('.sds', '.RData'),
+              buttonLabel = 'Обзор…',
+              placeholder = 'Файл не выбран'
+            )
           )
         ),
         ##### Редактирование ----

@@ -204,7 +204,7 @@ server <- function(input, output, session) {
   ### Экспорт и импорт ----
   output$download_scaleset <- downloadHandler(
     filename = function() {
-      paste('scaleset', Sys.Date(), '.RData', sep = '-')
+      paste('scaleset-', Sys.Date(), '.sds', sep = '')
     },
     content = function(file) {
       scaleset <- scaleset()
