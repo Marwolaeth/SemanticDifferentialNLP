@@ -15,9 +15,7 @@ ui <- dashboardPage(
     width = '30%',
     sidebarMenu(
       menuItem('Оценка', tabName = 'assessment', icon = icon('check')),
-      menuItem(
-        'Настройки шкал', tabName = 'settings', icon = icon('sliders')
-      ),
+      menuItem('Шкалы', tabName = 'settings', icon = icon('sliders')),
       menuItem(
         'Настройки оценщиков',
         tabName = 'method-settings',

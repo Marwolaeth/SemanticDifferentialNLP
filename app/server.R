@@ -20,7 +20,7 @@ server <- function(input, output, session) {
   output$model <- renderUI({
     selectInput(
       'model',
-      label = 'Выберите модель',
+      label = 'Модель',
       choices = models(),
       selected = 7,
       width = '100%'
