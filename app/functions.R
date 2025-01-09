@@ -569,6 +569,10 @@ similarity_norm <- function(
 ) {
   metric <- match.arg(metric, c('cosine', 'spearman', 'pearson', 'kendall'))
   
+  if (nrow(text_embeddings) == 0) {
+    return(matrix(0, nrow = 1, ncol = length(norm_embeddings$texts)))
+  }
+  
   texts <- text_embeddings |>
     dplyr::select(dplyr::starts_with('Dim')) |>
     as.matrix()
@@ -737,12 +741,13 @@ semdiff_zeroshot_map <- function(
   #   dplyr::relocate(texts, .after = 1)
 }
 
-semdiff_similarity_map <- function(
+semdiff_similarity <- function(
     texts,
     model,
-    items,
-    template,
+    norm_embeddings,
     prefix = FALSE,
+    aggregation = if (prefix) 'cls' else 'token',
+    select_token = NULL,
     ...
 ) {
   if (!is.list(items)) items <- list(items)
