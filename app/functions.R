@@ -752,7 +752,7 @@ semdiff_similarity <- function(
     ...
 ) {
 
-  if (prefix) texts <- paste('classification:', texts)
+  if (prefix) sentences <- paste('classification:', sentences)
   
   text_embeddings <- text_embed(
     sentences,
