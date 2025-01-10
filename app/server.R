@@ -54,7 +54,7 @@ server <- function(input, output, session) {
       dplyr::mutate(
         sentence = stringr::str_replace_all(
           sentence,
-          '[Xx][Cc]ellent',
+          'Umbrella',
           input$object
         )
       ) |>

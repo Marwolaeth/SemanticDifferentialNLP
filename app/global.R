@@ -9,7 +9,7 @@ library(tictoc)
 source('functions.R', encoding = 'UTF-8')
 
 ### Данные для примеров ----
-examples <- read_excel('../data/xcellent-sentences.xlsx')
+examples <- read_excel('../data/umbrella-sentences.xlsx')
 # Роскомнадзор разрабатывает систему для выявления запрещенного контента на основе искусственного интелекта.
 # В Роскомнадзоре работают криворукие недоучки.
 
