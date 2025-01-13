@@ -59,7 +59,7 @@ str(mdl, 1)
 mdl[[2]]
 
 ## Text Embeddings ----
-txts <- .replace_object(texts, 'Xcellent', 'Y')
+(txts <- .replace_object(texts, 'Xcellent', 'Y'))
 word_embeddings_layers <- text_embed_raw(txts, model)
 variable_list_i <- 1
 
@@ -96,6 +96,28 @@ toc()
 tic()
 e2 <- textEmbedRawLayers(texts, model = model, layers = -1, return_tokens = T)
 toc()
+
+## Zero-Shot ----
+res <- hgTransformerGetZeroShot(
+  sequences = txts,
+  candidate_labels = c('не инновационный', 'инновационный'),
+  hypothesis_template = template,
+  multi_label = FALSE,
+  model = model,
+  device = 'cpu',
+  tokenizer_parallelism = FALSE, # To be checked!
+  logging_level = 'error',
+  force_return_results = FALSE,
+  set_seed = 111L
+)
+
+res <- semdiff_zeroshot_map(
+  txts,
+  model = model,
+  items = items,
+  template = template,
+  prefix = FALSE
+)
 
 ## Norm Embeddings ----
 (items <- scaleset[[1]])
