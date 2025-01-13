@@ -361,7 +361,7 @@ stem <- compiler::cmpfun(stem, options = list(optimize=3))
       '([\\[\\]\\(\\)\\-\\+\\?\\.\\*\\^\\^\\{\\}])',
       '\\\\\\1'
     ) |>
-    stringr::str_replace_all(fixed(' '), fixed('\\w*\\s')) |>
+    stringr::str_replace_all(stringr::fixed(' '), stringr::fixed('\\w*\\s')) |>
     paste0('\\w*') |>
     str_parenthesise() |>
     paste(collapse = '|')
@@ -543,7 +543,11 @@ semdiff_zeroshot <- function(
     concepts <- sapply(
       concepts,
       function(concept) {
-        stringr::str_replace(template, fixed('{}'), fixed(concept))
+        stringr::str_replace(
+          template,
+          stringr::fixed('{}'),
+          stringr::fixed(concept)
+        )
       }
     )
   }
@@ -608,7 +612,11 @@ benchmark_similarity <- function(
   hypotheses <- sapply(
     concepts,
     function(concept) {
-      stringr::str_replace(template, fixed('{}'), fixed(concept))
+      stringr::str_replace(
+        template,
+        stringr::fixed('{}'),
+        stringr::fixed(concept)
+      )
     }
   )
   
