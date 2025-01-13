@@ -40,6 +40,18 @@ object <- c('XCellent', 'наша компания', 'Атлас+', '[BERT]')
 select_token <- 'Y'
 similarity_group_items <- TRUE
 
+## More controlled experiment ----
+texts <- c(
+  texts,
+  'XCellent тупой и отсталый',
+  'XCellent — самая инновационная компания в мире.',
+  'Umbrella очень инновационная компания.',
+  'Umbrella очень инновационная компания, а XCellent отстает в развитии.'
+)
+
+(txts <- .replace_object(texts, 'XCellent', 'Y'))
+(template <- .replace_object(template, 'XCellent', 'Y'))
+
 # Examples ----
 ## Object Masking ----
 .object_regex(object)
@@ -474,6 +486,7 @@ toc()
 
 (txt <- paste(txts[2], txts[3]))
 (txt <- 'Y абсолютно отсталая контора. Она совсем не развивается.')
+# (sents <- paragraphs(txt))
 (sents <- sentences(txt))
 
 if (prefix) sents <- paste('classification:', sents)
@@ -486,11 +499,11 @@ text_embeddings <- text_embed(
 )
 toc()
 
-textEmbed(
-  sents, model = model, remove_non_ascii = FALSE, layers = -1,
-  max_token_to_sentence = 20 
-)
-textEmbed('Ха-ха', model = model, remove_non_ascii = FALSE, layers = -1)
+# textEmbed(
+#   sents, model = model, remove_non_ascii = FALSE, layers = -1,
+#   max_token_to_sentence = 20 
+# )
+# textEmbed('Ха-ха', model = model, remove_non_ascii = FALSE, layers = -1)
 
 (n_items <- length(norm_embeddings$texts))
 (n_comparisons <- n_items / 2)
@@ -499,9 +512,29 @@ textEmbed('Ха-ха', model = model, remove_non_ascii = FALSE, layers = -1)
 
 (s <- similarity_norm(text_embeddings$texts$texts, norm_embeddings))
 
+(s <- similarity_norm(
+  text_embeddings$texts$texts,
+  norm_embeddings,
+  metric = 'spearman'
+))
+
 (s <- apply(s, 2, max))
 
-((s %*% mask) / n_comparisons) * 6.6
+# ((s %*% mask) / n_comparisons) * 6.6
+
+softmax(s * 10)
+
+tic()
+bs1 <- benchmark_similarity(
+  norm_embeddings,
+  model,
+  template,
+  prefix = TRUE,
+  aggregation = 'cls',metric = 'spearman'
+)
+toc()
+
+softmax((s / bs1) * 10)
 
 ### Token ----
 tic()
@@ -568,20 +601,29 @@ scaleset_norms <- purrr::map2(
   purrr::set_names(names(scaleset))
 toc()
 
+
+if (prefix) sents <- paste('classification:', sents)
+
+tic()
+text_embeddings <- text_embed(
+  txts,
+  model,
+  aggregation_from_tokens_to_texts = 'cls',
+  select_token = universal_brand_name,
+  device = 'cpu'
+)
+toc()
+
 tic()
 purrr::map2(
   scaleset,
   seq_along(scaleset),
   function(semantic_scale, i) {
       semdiff_similarity(
-        sentences = sentences(txt),
-        model = model,
+        text_embeddings = text_embeddings,
         norm_embeddings = scaleset_norms[[i]],
-        prefix = prefix,
-        aggregation = 'cls',
-        select_token = universal_brand_name,
         similarity_metric = 'cosine',
-        device = 'cpu'
+        use_softmax = T
       )
     }
 ) |>
