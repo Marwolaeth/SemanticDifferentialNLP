@@ -144,7 +144,7 @@ text_embed_raw <- function(
     embeddings <- dplyr::filter(embeddings, token_id == token)
   } else if (is.character(token)) {
     # Add an optional first character for RoBERTa tokenizers
-    token_regex <- paste0('^.?', token, '$')
+    token_regex <- paste0('^.?', tolower(token), '$')
     embeddings <- dplyr::filter(
       embeddings,
       (token_id == 1 & keep_first) |
@@ -604,7 +604,7 @@ benchmark_similarity <- function(
     template,
     prefix = FALSE,
     aggregation = if (prefix) 'cls' else 'token',
-    metric = c('cosine', 'spearman'),
+    metric = 'cosine',
     ...
 ) {
   concepts <- names(norm_embeddings$texts)
@@ -750,25 +750,13 @@ semdiff_zeroshot_map <- function(
 }
 
 semdiff_similarity <- function(
-    sentences,
-    model,
+    text_embeddings,
     norm_embeddings,
-    prefix = FALSE,
-    aggregation = if (prefix) 'cls' else 'token',
-    select_token = NULL,
     similarity_metric = 'cosine',
+    use_softmax = FALSE,
+    temperature = 10,
     ...
 ) {
-
-  if (prefix) sentences <- paste('classification:', sentences)
-  
-  text_embeddings <- text_embed(
-    sentences,
-    model,
-    aggregation_from_tokens_to_texts = aggregation,
-    select_token = select_token,
-    ...
-  )
   
   # Number of differential items un the scale
   n_items <- length(norm_embeddings$texts)
@@ -776,8 +764,7 @@ semdiff_similarity <- function(
   # Number of item pairs
   n_comparisons <- n_items / 2
   
-  # Summation pattern
-  mask <- rep(c(-1, 1), n_comparisons)
+  
   
   similarity_matrix <- similarity_norm(
     text_embeddings$texts$texts,
@@ -785,7 +772,15 @@ semdiff_similarity <- function(
     metric = similarity_metric
   )
   
-  max_bipolar_scores <- apply(similarity_matrix, 2, max)
+  max_bipolar_scores <- apply(similarity_matrix, 2, max, na.rm = TRUE)
+  
+  if (use_softmax) {
+    max_bipolar_scores <- softmax(max_bipolar_scores * temperature)
+    # Summation pattern
+    mask <- rep(c(0, 1), n_comparisons)
+  } else {
+    mask <- rep(c(-1, 1), n_comparisons)
+  }
   
   score <- ((max_bipolar_scores %*% mask) / n_comparisons)[1]
   

@@ -33,11 +33,13 @@ scale <- scaleset[[1]]
 items <- scale
 # model <- 'Marwolaeth/rosberta-nli-terra-v0'
 # model <- 'ai-forever/ru-en-RoSBERTa'
-model <- 'MoritzLaurer/ernie-m-base-mnli-xnli'
+# model <- 'MoritzLaurer/ernie-m-base-mnli-xnli'
+model <- 'ai-forever/ruElectra-small'
 # prefix <- TRUE
 prefix <- FALSE
 object <- c('XCellent', 'наша компания', 'Атлас+', '[BERT]')
-select_token <- 'Y'
+universal_brand_name <- 'Y'
+select_token <- universal_brand_name
 similarity_group_items <- TRUE
 
 ## More controlled experiment ----
@@ -559,10 +561,14 @@ tic()
 text_embeddings <- text_embed(
   sents,
   model,
-  aggregation_from_tokens_to_texts = 'token',
-  select_token = select_token
+  aggregation_from_tokens_to_texts = 'mean',
+  select_token = universal_brand_name,
+  keep_token_embeddings = TRUE
 )
 toc()
+
+textEmbed(sents, model = model, remove_non_ascii = FALSE)
+text_embed(sents, model, keep_token_embeddings = T)
 
 (n_items <- length(norm_embeddings$texts))
 (n_comparisons <- n_items / 2)

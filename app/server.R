@@ -152,11 +152,37 @@ server <- function(input, output, session) {
     print(hypotheses())
     
     #### Функции анализа ----
-    tictoc::tic()
+    tictoc::tic('Analysing sigle text')
     withProgress(
       session = session,
       message = 'Анализируем…',
       {
+        # Get text embeddings and other parameters once
+        if (input$method == 'similarity') {
+          if (input$similarity_aggregation == 'auto') {
+            aggregation <- ifelse(prefix(), 'cls', 'token')
+          } else {
+            aggregation <- input$similarity_aggregation
+          }
+          
+          tic(msg = 'Embedding text')
+          
+          prgrphs <- paragraphs(text)
+          if (prefix()) prgrphs <- paste('classification:', prgrphs)
+          
+          incProgress(
+            1 / (length(scaleset())^2),
+            message = 'Векторизация текста',
+          )
+          text_embeddings <- text_embed(
+            prgrphs,
+            model = model_name,
+            aggregation_from_tokens_to_texts = aggregation,
+            select_token = universal_brand_name,
+            device = tolower(input$device)
+          )
+          toc()
+        }
         res <- purrr::map2(
           scaleset(),
           seq_along(scaleset()),
@@ -180,20 +206,11 @@ server <- function(input, output, session) {
               ) 
             ##### Similarity ----
             } else if (input$method == 'similarity') {
-              if (input$similarity_aggregation == 'auto') {
-                aggregation <- ifelse(prefix(), 'cls', 'token')
-              } else {
-                aggregation <- input$similarity_aggregation
-              }
               scale_result <- semdiff_similarity(
-                sentences = sentences(text),
-                model = model_name,
+                text_embeddings = text_embeddings,
                 norm_embeddings = scaleset_norms()[[i]],
-                prefix = prefix(),
-                aggregation = aggregation,
-                select_token = universal_brand_name,
                 similarity_metric = input$similarity_metric,
-                device = tolower(input$device)
+                use_softmax = T # Check
               )
             }
             return(scale_result)
