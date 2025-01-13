@@ -27,6 +27,7 @@ match_arch <- function(model_name) {
     re.match(model_name, 'BART') ~ 'BART',
     re.match(model_name, 'bge') ~ 'BAAI',
     re.match(model_name, 'nv\\-') ~ 'NV',
+    re.match(model_name, 'xlm') ~ 'XLM',
     re.match(model_name, 'T5') ~ 'T5',
     NA ~ '[other]',
     .default = '[other]'
@@ -46,7 +47,7 @@ model_download_and_test <- function(
     model_name,
     lang = c('en', 'ru')
 ) {
-  test_lang <- match.arg(lang, c('en', 'ru'), several.ok = FALSE)
+  lang <- match.arg(lang, c('en', 'ru'), several.ok = FALSE)
   
   txt <- ifelse(lang == 'en', "It's OK", "Всё нормально") |> enc2utf8()
   
@@ -116,8 +117,8 @@ models <- list(
         'YituTech/conv-bert-base',
         'YituTech/conv-bert-medium-small',
         'YituTech/conv-bert-small',
-        'BAAI/bge-base-en-v1.5',
-        'BAAI/bge-small-en-v1.5',
+        # 'BAAI/bge-base-en-v1.5',
+        # 'BAAI/bge-small-en-v1.5',
         # 'nvidia/NV-Embed-v2',
         # 'MendelAI/nv-embed-v2-ontada-twab-peft',
         'xlnet/xlnet-base-cased',
@@ -171,12 +172,12 @@ models <- list(
         'mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis',
         'kekunh/fine_tuned_finroberta',
         'rnribeiro/FT-mrm8488-distilroberta-finetuned-financial-news-sentiment-analysis',
-        'PaddlePaddle/uie-base-en',
-        'PaddlePaddle/ernie-2.0-large-en',
-        'PaddlePaddle/ernie-2.0-base-en',
-        'nghuyong/ernie-2.0-base-en',
-        'PaddlePaddle/uie-mini',
-        'PaddlePaddle/uie-micro',
+        # 'PaddlePaddle/uie-base-en',
+        # 'PaddlePaddle/ernie-2.0-large-en',
+        # 'PaddlePaddle/ernie-2.0-base-en',
+        # 'nghuyong/ernie-2.0-base-en',
+        # 'PaddlePaddle/uie-mini',
+        # 'PaddlePaddle/uie-micro',
         'DunnBC22/ernie-2.0-base-en-Tweet_About_Disaster_Or_Not',
         'hplisiecki/word2affect_english',
         'research-dump/all-roberta-large-v1_wikinews_outcome_prediction_v1',
@@ -204,6 +205,10 @@ models <- list(
         'symanto/xlm-roberta-base-snli-mnli-anli-xnli',
         'MoritzLaurer/ernie-m-base-mnli-xnli',
         'MoritzLaurer/ernie-m-large-mnli-xnli',
+        'MoritzLaurer/mDeBERTa-v3-base-mnli-xnli',
+        'MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7',
+        'MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli',
+        'MoritzLaurer/xlm-v-base-mnli-xnli',
         'sileod/mdeberta-v3-base-tasksource-nli',
         'mjwong/mcontriever-msmarco-xnli',
         'DeepPavlov/xlm-roberta-large-en-ru-mnli',
@@ -271,8 +276,9 @@ models_df <- purrr::list_rbind(
   names_to = 'lang'
 )
 res <- models_df |>
+  dplyr::mutate(lang = as.character(lang)) |>
   dplyr::select(model, lang) |>
-  as.list() |>
+  # as.list() |>
   purrr::pmap(purrr::safely(model_download_and_test))
 
 res

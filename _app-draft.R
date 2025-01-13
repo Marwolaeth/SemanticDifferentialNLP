@@ -34,7 +34,8 @@ items <- scale
 # model <- 'Marwolaeth/rosberta-nli-terra-v0'
 # model <- 'ai-forever/ru-en-RoSBERTa'
 model <- 'MoritzLaurer/ernie-m-base-mnli-xnli'
-prefix <- TRUE
+# prefix <- TRUE
+prefix <- FALSE
 object <- c('XCellent', 'наша компания', 'Атлас+', '[BERT]')
 select_token <- 'Y'
 similarity_group_items <- TRUE
@@ -98,21 +99,29 @@ e2 <- textEmbedRawLayers(texts, model = model, layers = -1, return_tokens = T)
 toc()
 
 ## Zero-Shot ----
+textZeroShot(
+  texts,
+  model = model,
+  candidate_labels = c('не инновационный', 'инновационный'),
+  hypothesis_template = template,
+  multi_label = FALSE
+)
+
 res <- hgTransformerGetZeroShot(
-  sequences = txts,
+  sequences = texts,
   candidate_labels = c('не инновационный', 'инновационный'),
   hypothesis_template = template,
   multi_label = FALSE,
   model = model,
   device = 'cpu',
-  tokenizer_parallelism = FALSE, # To be checked!
+  tokenizer_parallelism = TRUE, # To be checked!
   logging_level = 'error',
   force_return_results = FALSE,
   set_seed = 111L
 )
 
 res <- semdiff_zeroshot_map(
-  txts,
+  texts,
   model = model,
   items = items,
   template = template,
