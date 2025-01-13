@@ -18,11 +18,12 @@ server <- function(input, output, session) {
   })
   
   output$model <- renderUI({
+    current_model <- isolate(input$model)
     selectInput(
       'model',
       label = 'Модель',
       choices = models(),
-      selected = 7,
+      selected = current_model,
       width = '100%'
     )
   })
