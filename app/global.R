@@ -18,3 +18,6 @@ load('../data/models/models.RData')
 
 ### Единый объект для оценки ----
 universal_brand_name <- 'Y'
+
+### Шкала тахометров ----
+GAUGE_SCALE <- 5

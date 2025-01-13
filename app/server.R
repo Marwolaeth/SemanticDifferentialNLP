@@ -235,16 +235,16 @@ server <- function(input, output, session) {
     lapply(seq_along(result()), function(scale_i) {
       scale_name <- names(result())[scale_i]
       output[[paste0('gauge_', scale_i)]] <- renderGauge({
-        value <- mean(result()[[scale_name]][['.score']]) * 10
+        value <- mean(result()[[scale_name]][['.score']]) * GAUGE_SCALE
         gauge(
           label = scale_name,
           value,
-          min = -10, max = 10, 
+          min = -GAUGE_SCALE, max = GAUGE_SCALE, 
           symbol = '', 
           gaugeSectors(
-            success = c(5, 10),
-            danger = c(-10, 0),
-            warning = c(0, 5)
+            success = c(GAUGE_SCALE * .8, GAUGE_SCALE),
+            danger = c(-GAUGE_SCALE, -GAUGE_SCALE * .4),
+            warning = c(-GAUGE_SCALE * .4, GAUGE_SCALE * .8)
           )
         )
       })
