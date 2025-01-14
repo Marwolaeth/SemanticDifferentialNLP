@@ -4,7 +4,8 @@ if (!require(devtools)) {
 devtools::install_github(
   c(
     'OscarKjell/text',
-    'rossellhayes/and'
+    'rossellhayes/and',
+    'tidyverse/ellmer'
   ),
   build = TRUE
 )
