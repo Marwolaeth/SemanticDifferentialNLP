@@ -11,23 +11,52 @@ library(text)
 library(yardstick)
 
 ## The Model ----
-ollamar::pull('llama3.2')
+# ollamar::pull('llama3.2')
+ollamar::pull('phi4')
 
 system_prompt <- ollamar::create_message(
   role = 'system',
   content = paste(
     'You are a skillful content analysis engine model tailored',
     'for brand analytics. Your task is to assess the image of a given brand',
-    'based on the provided text.'
+    'based on any provided text in Russian that mentions the brand name',
+    '(substituted as "Y"), which may include',
+    'news articles, summaries, blog posts, press releases, or tweets.',
+    'Your output should include ratings on various semantic scales (e.g.,',
+    'Innovative vs. Outdated, Popular vs. Unpopular) on a scale from -5 to 5.',
+    'If the text does not provide relevant information to assess a given trait,',
+    'please assign a rating of 0 for that scale and indicate that the text was insufficient.',
+    'Format your output as a JSON string, separating the rating from the explanation.',
+    'Example: {"innovative":{"rating":4,"comment":"Perceived as modern"},"popular":{"rating":0,"comment":"No relevant info"}}.'
   )
 )
+
+system_prompt <- ollamar::create_message(
+  role = 'system',
+  content = paste(
+    'You are a skillful content analysis engine model tailored',
+    'for brand analytics. Your task is to assess the image of a given brand',
+    'based on any provided text in Russian that mentions the brand name (substituted as "Y"), which may include',
+    'news articles, summaries, blog posts, press releases, or tweets.',
+    'Your output should include ratings on various semantic scales (e.g.,',
+    '"инновационность": инновационный (innovative) vs. устаревший (outdated),',
+    '"популярность": популярный (Popular) или модный (fancy) vs. непопулярный (unpopular) и немодный (not fancy)',
+    'on a scale from -5 to 5.',
+    'If the text does not provide relevant information to assess a given trait,',
+    'please assign a rating of 0 for that scale and indicate that the text was insufficient.',
+    'Format your output as a JSON string, separating the rating from the explanation.',
+    'Example: {"инновационность":{"rating":4,"comment":"Perceived as modern"},"популярность":{"rating":0,"comment":"No relevant info"}}.'
+  )
+)
+
 
 messages <- ollamar::create_messages(
   system_prompt
 )
 
 # llm_use('ollama', 'llama3.2', seed = 111, messages = messages)
-backend <- llm_use('ollama', 'llama3.2', seed = 111)
+backend <- llm_use('ollama', 'llama3.2', seed = 111L)
+backend <- llm_use('ollama', 'Phi4', seed = 111L)
 
 ## An Experiment ----
 (verbs_data <- c(
@@ -63,9 +92,9 @@ toc()
 
 ## The Data ----
 df <- readxl::read_excel(
-  'data/xcellent-sentences.xlsx'
+  'data/umbrella-sentences.xlsx'
 ) |>
-  dplyr::filter(feature == 'Инновационность')
+  dplyr::filter(feature %in% c('Инновационность', 'Модность'))
 
 ## The Metrics ----
 pred_metrics <- metric_set(accuracy, bal_accuracy, precision, recall)
@@ -89,9 +118,10 @@ toc()
 
 ### Llama ----
 #### Binary Classification ----
+universal_brand_name <- 'Y'
 prompt_inno_binary <- paste(
-  'Xcellent seems to be an innovative and pioneering company.',
-  'Focus precisely on this aspect, not other like success,',
+  '{universal_brand_name} seems to be an innovative and pioneering company.',
+  'Focus precisely on this aspect, not others like success,',
   'popularity or overall sentiment.'
   # 'that invents something new and surpasses all its rivals in innovations.',
   # 'For example, it develops new products,',
@@ -104,6 +134,12 @@ prompt_inno_binary <- paste(
 #   'Не считаются случайные упоминания, вроде бывших сотрудников или отдельных',
 #   'изделий, перечисления и эпизодические упоминания.'
 # )
+
+source('app/functions.R')
+
+df$sentence <- .replace_object(df$sentence, 'Umbrella', universal_brand_name)
+
+(prompt_inno_binary <- glue::glue(prompt_inno_binary))
 
 tic()
 df <- df |> 
@@ -132,12 +168,31 @@ df |>
   )
 
 #### Custom Prompt ----
-brand <- 'Xcellent'
+brand <- universal_brand_name
 # scale_name <- 'Отсталый – Инновационный'
 # scale_properties <- c(
 #   'кажется отсталым, устаревшим и совсем не развивающимся',
 #   'прозводит впечатление инновационного, передового, современного, задающего технологические тренды'
 # )
+
+user_prompt <- ollamar::create_message(
+  role = 'user',
+  content = paste(
+    'Please assess the following text for brand image on 2 scales:',
+    'Сосредоточьтесь на следующих аспектах: инновационность, популярность.',
+    'Пожалуйста, предоставьте результаты в формате JSON, упаковывая оценки по каждому аспекту.',
+    'Текст:'
+  )
+)
+
+prompts <- ollamar::create_messages(
+  system_prompt,
+  user_prompt
+)
+inherits(prompts, 'list')
+ollamar::validate_messages(prompts)
+
+
 
 prompt_inno <- glue::glue(
   "Brand name: “{brand}”\n",
@@ -224,15 +279,39 @@ m_backend_submit.mall_ollama <- function(backend, x, prompt, preview = FALSE) {
   )
 }
 
+(sents <- .replace_object(sents, 'Xcellent', universal_brand_name))
 preview <- FALSE
 tic()
 resp <- m_backend_submit(
   backend = backend,
-  x = df$sentence,
+  x = sents,
   prompt = prompts,
   preview = preview
 )
 toc()
+
+jsonlite::fromJSON(resp[[1]])
+
+(response <- resp[[1]])
+(response <- resp)
+.parse_response <- function(response) {
+  starts <- stringr::str_locate(response, stringr::fixed('{'))[,1, drop = FALSE]
+  ends <- stringr::str_locate_all(response, stringr::fixed('}'))
+  ends <- purrr::map_vec(
+    ends,
+    \(e) end = e[nrow(e), ncol(e), drop = FALSE]
+  )
+  locs <- cbind(start = starts, end = ends)
+  responses <- stringr::str_sub(response, start = locs)
+  jsonlite::fromJSON(
+    paste0(
+      '[',
+      paste(responses, collapse = ','),
+      ']'
+    )
+  )
+}
+resp_json <- 
 
 df <- df |>
   dplyr::mutate(
