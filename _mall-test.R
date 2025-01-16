@@ -9,27 +9,36 @@ if (!require(tictoc)) {
 }
 library(text)
 library(yardstick)
+source('app/functions.R', encoding = 'UTF-8')
 
 ## The Model ----
 # ollamar::pull('llama3.2')
 ollamar::pull('phi4')
 
-system_prompt <- ollamar::create_message(
-  role = 'system',
-  content = paste(
-    'You are a skillful content analysis engine model tailored',
-    'for brand analytics. Your task is to assess the image of a given brand',
-    'based on any provided text in Russian that mentions the brand name',
-    '(substituted as "Y"), which may include',
-    'news articles, summaries, blog posts, press releases, or tweets.',
-    'Your output should include ratings on various semantic scales (e.g.,',
-    'Innovative vs. Outdated, Popular vs. Unpopular) on a scale from -5 to 5.',
-    'If the text does not provide relevant information to assess a given trait,',
-    'please assign a rating of 0 for that scale and indicate that the text was insufficient.',
-    'Format your output as a JSON string, separating the rating from the explanation.',
-    'Example: {"innovative":{"rating":4,"comment":"Perceived as modern"},"popular":{"rating":0,"comment":"No relevant info"}}.'
-  )
-)
+# llm_use('ollama', 'llama3.2', seed = 111, messages = messages)
+backend_ll <- llm_use('ollama', 'llama3.2', seed = 111L)
+backend_ph <- llm_use('ollama', 'Phi4', seed = 111L)
+
+### Prompts ----
+
+# system_prompt <- ollamar::create_message(
+#   role = 'system',
+#   content = paste(
+#     'You are a skillful content analysis engine model tailored',
+#     'for brand analytics. Your task is to assess the image of a given brand',
+#     'based on any provided text in Russian that mentions the brand name',
+#     '(substituted as "Y"), which may include',
+#     'news articles, summaries, blog posts, press releases, or tweets.',
+#     'Your output should include ratings on various semantic scales (e.g.,',
+#     'Innovative vs. Outdated, Popular vs. Unpopular) on a scale from -5 to 5.',
+#     'If the text does not provide relevant information to assess a given trait,',
+#     'please assign a rating of 0 for that scale and indicate that the text was insufficient.',
+#     'Format your output as a JSON string, separating the rating from the explanation.',
+#     'Example: {"innovative":{"rating":4,"comment":"Perceived as modern"},"popular":{"rating":0,"comment":"No relevant info"}}.'
+#   )
+# )
+
+#### System ----
 
 system_prompt <- ollamar::create_message(
   role = 'system',
@@ -39,8 +48,10 @@ system_prompt <- ollamar::create_message(
     'based on any provided text in Russian that mentions the brand name (substituted as "Y"), which may include',
     'news articles, summaries, blog posts, press releases, or tweets.',
     'Your output should include ratings on various semantic scales (e.g.,',
-    '"инновационность": инновационный (innovative) vs. устаревший (outdated),',
-    '"популярность": популярный (Popular) или модный (fancy) vs. непопулярный (unpopular) и немодный (not fancy)',
+    # '"инновационность": инновационный (innovative) vs. устаревший (outdated),',
+    # '"популярность": популярный (Popular) или модный (fancy) vs. непопулярный (unpopular) и немодный (not fancy)',
+    '"инновационность": инновационный vs. устаревший,',
+    '"популярность": популярный или модный vs. непопулярный и немодный',
     'on a scale from -5 to 5.',
     'If the text does not provide relevant information to assess a given trait,',
     'please assign a rating of 0 for that scale and indicate that the text was insufficient.',
@@ -49,16 +60,204 @@ system_prompt <- ollamar::create_message(
   )
 )
 
+#### User ----
 
-messages <- ollamar::create_messages(
-  system_prompt
+user_prompt <- ollamar::create_message(
+  role = 'user',
+  content = paste(
+    'Please assess the following text for brand image on 2 scales.',
+    'Сосредоточьтесь на следующих аспектах: инновационность, популярность.',
+    'Пожалуйста, предоставьте результаты в формате JSON, упаковывая оценки по каждому аспекту.',
+    'Текст:'
+  )
 )
 
-# llm_use('ollama', 'llama3.2', seed = 111, messages = messages)
-backend <- llm_use('ollama', 'llama3.2', seed = 111L)
-backend <- llm_use('ollama', 'Phi4', seed = 111L)
+prompts <- ollamar::create_messages(
+  system_prompt,
+  user_prompt
+)
+inherits(prompts, 'list')
+ollamar::validate_messages(prompts)
 
-## An Experiment ----
+#### The Functions ----
+and <- function(x) {
+  delims <- c(rep(',', length(x) - 2), ' и', '')
+  paste(paste0(x, delims), collapse = ' ')
+}
+and <- compiler::cmpfun(and, options = list(optimize = 3))
+
+or <- function(x) {
+  delims <- c(rep(',', length(x) - 2), ' или', '')
+  paste(paste0(x, delims), collapse = ' ')
+}
+or <- compiler::cmpfun(or, options = list(optimize = 3))
+
+# x <- sample(letters, 13, replace = TRUE)
+# bench <- microbenchmark::microbenchmark(
+#   nocmp_or = or(x),
+#   cmp_or = or_(x),
+#   nocmp_and = and(x),
+#   cmp_and = and_(x),
+#   times = 1e5,
+#   check = NULL
+# )
+# bench
+
+m_backend_submit.mall_ollama <- function(backend, x, prompt, preview = FALSE) {
+  if (preview) {
+    x <- head(x, 1)
+    map_here <- purrr::map
+  } else {
+    map_here <- purrr::map_chr
+  }
+  map_here(
+    x,
+    \(x) {
+      .args <- c(
+        messages = purrr::map(
+          prompt,
+          function(p) {
+            if (p[['role']] == 'user') {
+              p[['content']] <- paste(p[['content']], x, sep = '\n')
+            }
+            p
+          }
+        ) |> list(),
+        output = "text",
+        mall:::m_defaults_args(backend)
+      )
+      res <- NULL
+      if (preview) {
+        res <- rlang::expr(ollamar::chat(!!!.args))
+      }
+      if (mall:::m_cache_use() && is.null(res)) {
+        hash_args <- rlang::hash(.args)
+        res <- mall:::m_cache_check(hash_args)
+      }
+      if (is.null(res)) {
+        require(ollamar)
+        res <- rlang::exec("chat", !!!.args)
+        mall:::m_cache_record(.args, res, hash_args)
+      }
+      res
+    }
+  )
+}
+
+.parse_response <- function(response) {
+  starts <- stringr::str_locate(response, stringr::fixed('{'))[,1, drop = FALSE]
+  ends <- stringr::str_locate_all(response, stringr::fixed('}'))
+  ends <- purrr::map_vec(
+    ends,
+    \(e) end = e[nrow(e), ncol(e), drop = FALSE]
+  )
+  locs <- cbind(start = starts, end = ends)
+  responses <- stringr::str_sub(response, start = locs)
+  jsonlite::fromJSON(
+    paste0(
+      '[',
+      paste(responses, collapse = ','),
+      ']'
+    ),
+    simplifyDataFrame = FALSE
+  )
+}
+
+## Experiment with Prompts ----
+sents <- c(
+  'Инженеры Xcellent работают над созданием микропроцессоров, которые могут изменить представление о вычислительных мощностях.',
+  'В то время как Xcellent сохраняет свои позиции, другие игроки, такие как BrightFuture, активно внедряют новшества.',
+  'Среди последних трендов в технологиях стоит отметить, как Xcellent внедряет инновационные решения в своем производстве.',
+  'Кажется, Xcellent начали забывать. А когда-то он ведь был популярным брендом.',
+  'Xcellent получил премию Business Awards как самая инновационная компания.'
+)
+universal_brand_name <- 'Y'
+
+(sents <- .replace_object(sents, 'Xcellent', universal_brand_name))
+preview <- FALSE
+
+### Hard-coded Prompts ----
+tic()
+resp <- m_backend_submit(
+  backend = backend_ll,
+  # backend = backend_ph,
+  x = sents,
+  prompt = prompts,
+  preview = preview
+)
+toc()
+
+.parse_response(resp)
+
+### Dynamic Prompts ----
+
+#### System ----
+
+system_prompt_template <- paste(
+  'You are a skillful content analysis engine model tailored',
+  'for brand analytics. Your task is to assess the image of a given brand',
+  'based on any provided text in Russian that mentions the brand name (substituted as "{universal_brand_name}"), which may include',
+  'news articles, summaries, blog posts, press releases, or tweets.',
+  'Your output should include ratings on various semantic scales (e.g.,',
+  '{scaleset_description}',
+  'on a scale from -5 to 5.',
+  'If the text does not provide relevant information to assess a given trait,',
+  'please assign a rating of 0 for that scale and indicate that the text was insufficient.',
+  'Format your output as a JSON string, separating the rating from the explanation.',
+  'Example: {{"инновационность":{{"rating":4,"comment":"Perceived as modern"}},"популярность":{{"rating":0,"comment":"No relevant info"}}}.'
+)
+
+scaleset_description <- 'Ку-ку'
+glue::glue(system_prompt_template) |> cat()
+
+
+#### User ----
+user_prompt_template <- paste(
+  'Please assess the following text for brand image on {n_scales} scales.',
+  'Сосредоточьтесь на следующих аспектах: {scale_names}.',
+  'Пожалуйста, предоставьте результаты в формате JSON, упаковывая оценки по каждому аспекту.',
+  'Текст:'
+)
+
+#### Шкалы ----
+scaleset <- list(
+  'Инновационность' = list(
+    c('устаревший' = -1, 'сдержанный' = 0, 'инновационный'   = 1),
+    c('отсталый'   = -1, 'стабильный' = 0, 'изобретательный' = 1)
+  ),
+  'Популярность' = list(
+    c('немодный'      = -1, 'адекватный'    = 0, 'модный'     = 1),
+    c('неактуальный'  = -1, 'специфический' = 0, 'молодежный' = 1),
+    c('непопулярный'  = -1, 'известный'     = 0, 'популярный' = 1),
+    c('малоизвестный' = -1, 'элитарный'     = 0, 'знаменитый' = 1)
+  ),
+  'Надежность' = list(
+    c('ненадежный'     = -1, 'нормальный'  = 0, 'надежный'     = 1),
+    c('некачественный' = -1, 'обычный'     = 0, 'качественный' = 1),
+    c('хлипкий'        = -1, 'стандартный' = 0, 'прочный'      = 1)
+  )
+)
+scale <- scaleset[[1]]
+items <- scale
+
+(n_scales <- length(scaleset))
+(scale_names <- and(tolower(names(scaleset))))
+user_prompt <- glue::glue(user_prompt_template)
+
+# '"инновационность": инновационный vs. устаревший,',
+# '"популярность": популярный или модный vs. непопулярный и немодный',
+
+
+
+prompts <- ollamar::create_messages(
+  system_prompt,
+  user_prompt
+)
+inherits(prompts, 'list')
+ollamar::validate_messages(prompts)
+
+
+## An Simple Experiment ----
 (verbs_data <- c(
   'love'            =  1,
   'hate'            = -1,
@@ -101,12 +300,6 @@ pred_metrics <- metric_set(accuracy, bal_accuracy, precision, recall)
 pred_metrics
 
 ## The Analysis ----
-### An Example ----
-sents <- c(
-  'Инженеры Xcellent работают над созданием микропроцессоров, которые могут изменить представление о вычислительных мощностях.',
-  'В то время как Xcellent сохраняет свои позиции, другие игроки, такие как BrightFuture, активно внедряют новшества.',
-  'Среди последних трендов в технологиях стоит отметить, как Xcellent внедряет инновационные решения в своем производстве.'
-)
 
 tic()
 llm_vec_verify(
@@ -118,7 +311,7 @@ toc()
 
 ### Llama ----
 #### Binary Classification ----
-universal_brand_name <- 'Y'
+
 prompt_inno_binary <- paste(
   '{universal_brand_name} seems to be an innovative and pioneering company.',
   'Focus precisely on this aspect, not others like success,',
@@ -134,8 +327,6 @@ prompt_inno_binary <- paste(
 #   'Не считаются случайные упоминания, вроде бывших сотрудников или отдельных',
 #   'изделий, перечисления и эпизодические упоминания.'
 # )
-
-source('app/functions.R')
 
 df$sentence <- .replace_object(df$sentence, 'Umbrella', universal_brand_name)
 
@@ -174,24 +365,6 @@ brand <- universal_brand_name
 #   'кажется отсталым, устаревшим и совсем не развивающимся',
 #   'прозводит впечатление инновационного, передового, современного, задающего технологические тренды'
 # )
-
-user_prompt <- ollamar::create_message(
-  role = 'user',
-  content = paste(
-    'Please assess the following text for brand image on 2 scales:',
-    'Сосредоточьтесь на следующих аспектах: инновационность, популярность.',
-    'Пожалуйста, предоставьте результаты в формате JSON, упаковывая оценки по каждому аспекту.',
-    'Текст:'
-  )
-)
-
-prompts <- ollamar::create_messages(
-  system_prompt,
-  user_prompt
-)
-inherits(prompts, 'list')
-ollamar::validate_messages(prompts)
-
 
 
 prompt_inno <- glue::glue(
@@ -237,81 +410,6 @@ ollamar::validate_messages(prompts)
 # backend <- llm_use(.silent = TRUE, .force = FALSE)
 # 
 # llm_vec_classify(x, c('outdated', 'stable', 'innovative'), preview = TRUE)
-
-m_backend_submit.mall_ollama <- function(backend, x, prompt, preview = FALSE) {
-  if (preview) {
-    x <- head(x, 1)
-    map_here <- purrr::map
-  } else {
-    map_here <- purrr::map_chr
-  }
-  map_here(
-    x,
-    \(x) {
-      .args <- c(
-        messages = purrr::map(
-          prompt,
-          function(p) {
-            if (p[['role']] == 'user') {
-              p[['content']] <- paste(p[['content']], x, sep = '\n')
-            }
-            p
-          }
-        ) |> list(),
-        output = "text",
-        mall:::m_defaults_args(backend)
-      )
-      res <- NULL
-      if (preview) {
-        res <- rlang::expr(ollamar::chat(!!!.args))
-      }
-      if (mall:::m_cache_use() && is.null(res)) {
-        hash_args <- rlang::hash(.args)
-        res <- mall:::m_cache_check(hash_args)
-      }
-      if (is.null(res)) {
-        require(ollamar)
-        res <- rlang::exec("chat", !!!.args)
-        mall:::m_cache_record(.args, res, hash_args)
-      }
-      res
-    }
-  )
-}
-
-(sents <- .replace_object(sents, 'Xcellent', universal_brand_name))
-preview <- FALSE
-tic()
-resp <- m_backend_submit(
-  backend = backend,
-  x = sents,
-  prompt = prompts,
-  preview = preview
-)
-toc()
-
-jsonlite::fromJSON(resp[[1]])
-
-(response <- resp[[1]])
-(response <- resp)
-.parse_response <- function(response) {
-  starts <- stringr::str_locate(response, stringr::fixed('{'))[,1, drop = FALSE]
-  ends <- stringr::str_locate_all(response, stringr::fixed('}'))
-  ends <- purrr::map_vec(
-    ends,
-    \(e) end = e[nrow(e), ncol(e), drop = FALSE]
-  )
-  locs <- cbind(start = starts, end = ends)
-  responses <- stringr::str_sub(response, start = locs)
-  jsonlite::fromJSON(
-    paste0(
-      '[',
-      paste(responses, collapse = ','),
-      ']'
-    )
-  )
-}
-resp_json <- 
 
 df <- df |>
   dplyr::mutate(
