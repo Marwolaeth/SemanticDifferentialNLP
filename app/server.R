@@ -41,6 +41,9 @@ server <- function(input, output, session) {
     )
   })
   
+  ## Хранение истории ----
+  eval_history <- reactiveVal(tibble::tibble())
+  
   ## Обработка ----
   
   ### Шаблон гипотезы ----
@@ -352,5 +355,46 @@ server <- function(input, output, session) {
   
   output$scales_output <- renderPrint({
     scaleset()
+  })
+  
+  ## История оценок ----
+  output$history <- renderReactable({
+    req(input$submit)
+    req(result())
+    
+    if (input$method == 'classification') {
+      current_result <- result() |>
+        show_scales_result()
+    } else {
+      current_result <- result()
+    }
+    
+    current_result <- current_result |>
+      dplyr::bind_rows(.id = 'scale') |>
+      mutate(text = isolate(input$text), .before = 0L)
+    
+    eval_history(
+      dplyr::bind_rows(
+        isolate(eval_history()),
+        current_result
+      )
+    )
+    
+    isolate(eval_history()) |>
+      reactable(
+        defaultColDef = colDef(
+          headerStyle = list(background = '#DD4B39')
+        ),
+        columns = list(
+          text = colDef(name = 'Текст'),
+          scale = colDef(name = 'Шкала', filterable = TRUE),
+          items = colDef(name = 'Пункты'),
+          .score = colDef(
+            name = 'Значение',
+            format = colFormat(digits = 3, locales = 'ru-UA')
+          )
+        ),
+        elementId = 'history-table'
+      )
   })
 }

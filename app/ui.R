@@ -20,7 +20,8 @@ ui <- dashboardPage(
         'Настройки оценщиков',
         tabName = 'method-settings',
         icon = icon('magnifying-glass-chart')
-      )
+      ),
+      menuItem('История', tabName = 'history', icon = icon('clock-rotate-left'))
     )
   ),
   
@@ -230,6 +231,22 @@ ui <- dashboardPage(
             value = 'edit-llm'
           )
         )
+      ),
+      #### История оценок ----
+      tabItem(
+        tabName = 'history',
+        h2('История оценок'),
+        tags$button(
+          tagList(fontawesome::fa('download'), 'Сохранить CSV'),
+          onclick = "Reactable.downloadDataCSV(
+            'history-table', 'history.csv',
+            {headers: true, sep: ';', dec: ','}
+          )",
+          class = '
+            btn btn-default shiny-download-link btn-success shiny-bound-output',
+          style = 'margin-bottom: 20px;'
+        ),
+        reactableOutput('history')
       )
     )
   )
