@@ -6,7 +6,7 @@ server <- function(input, output, session) {
   iv <- InputValidator$new()
   iv$add_rule('hypothesis_template', sv_required(message = 'Обязательно'))
   iv$add_rule(
-    'hypothesis-template',
+    'hypothesis_template',
     sv_regex(
       pattern = '{brand_name}',
       fixed = TRUE,
@@ -14,7 +14,7 @@ server <- function(input, output, session) {
     )
   )
   iv$add_rule(
-    'hypothesis-template',
+    'hypothesis_template',
     sv_regex(
       pattern = '{hypothesis}',
       fixed = TRUE,
@@ -22,6 +22,22 @@ server <- function(input, output, session) {
     )
   )
   iv$enable()
+  
+  output$hypothesis_preview <- renderText({
+    req(input$object)
+    req(input$hypothesis_template)
+    
+    stringr::str_replace(
+      input$hypothesis_template,
+      fixed('{brand_name}'),
+      fixed(input$object)
+    ) |>
+      stringr::str_replace(
+        fixed('{hypothesis}'),
+        # Самый первый позитивный маркер
+        fixed(names(scaleset()[[1]][[1]])[3])
+      )
+  })
   
   ### Выбор моделей в зависимости от метода ----
   models <- reactive({
@@ -391,7 +407,7 @@ server <- function(input, output, session) {
     req(input$submit)
     req(result())
     
-    if (input$method == 'classification') {
+    if (isolate(input$method) == 'classification') {
       current_result <- result() |>
         show_scales_result()
     } else {

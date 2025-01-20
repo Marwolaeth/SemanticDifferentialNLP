@@ -201,7 +201,14 @@ ui <- dashboardPage(
               'Шаблон гипотезы',
               value = '{brand_name} – {hypothesis}'
             ),
-            textOutput('hypothesis-preview')
+            tags$strong('Предпросмотр: '),
+            tags$div(
+              textOutput(
+                'hypothesis_preview',
+                inline = FALSE
+              ),
+              style = 'color:#888;'
+            )
           ),
           ##### Similarity ----
           tabPanel(
