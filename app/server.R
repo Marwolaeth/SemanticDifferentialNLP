@@ -4,6 +4,7 @@ server <- function(input, output, session) {
   
   ### Проверка ввода ----
   iv <- InputValidator$new()
+  
   iv$add_rule('hypothesis_template', sv_required(message = 'Обязательно'))
   iv$add_rule(
     'hypothesis_template',
@@ -99,12 +100,22 @@ server <- function(input, output, session) {
   
   ### Случайный пример ----
   observeEvent(input$example, {
+    if (stringr::str_detect(input$object, fixed(','))) {
+      objects <- input$object |>
+        stringr::str_split(fixed(',')) |>
+        unlist() |>
+        stringr::str_squish()
+      object <- objects[[1]]
+    } else {
+      object <- input$object
+    }
+    
     ex <- dplyr::slice_sample(examples, n = 1) |>
       dplyr::mutate(
         sentence = stringr::str_replace_all(
           sentence,
           'Umbrella',
-          input$object
+          object
         )
       ) |>
       dplyr::pull(sentence)
