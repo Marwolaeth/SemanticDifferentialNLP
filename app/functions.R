@@ -764,8 +764,6 @@ semdiff_similarity <- function(
   # Number of item pairs
   n_comparisons <- n_items / 2
   
-  
-  
   similarity_matrix <- similarity_norm(
     text_embeddings$texts$texts,
     norm_embeddings,
