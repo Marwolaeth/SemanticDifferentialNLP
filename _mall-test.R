@@ -81,12 +81,14 @@ ollamar::validate_messages(prompts)
 
 #### The Functions ----
 and <- function(x) {
+  if (length(x) <= 1) return(x)
   delims <- c(rep(',', length(x) - 2), ' и', '')
   paste(paste0(x, delims), collapse = ' ')
 }
 and <- compiler::cmpfun(and, options = list(optimize = 3))
 
 or <- function(x) {
+  if (length(x) <= 1) return(x)
   delims <- c(rep(',', length(x) - 2), ' или', '')
   paste(paste0(x, delims), collapse = ' ')
 }
@@ -245,13 +247,28 @@ item <- items[[1]]
 (scale_names <- and(tolower(names(scaleset))))
 user_prompt <- glue::glue(user_prompt_template)
 
+max_items <- 2
+
 scaleset_description <- purrr::map2(
   scaleset,
   names(scaleset),
   function(scale, name) {
     markers <- map(scale, names)
-    items_neg <- map_chr(markers, 1) |> or() |> str_parenthesise()
-    items_pos <- map_chr(markers, 3) |> or() |> str_parenthesise()
+    items_neg <- map_chr(markers, 1)
+    items_pos <- map_chr(markers, 3)
+    if (is.null(max_items)) max_items <- length(items_neg)
+    if (max_items == 1L) {
+      items_neg <- items_neg[1]
+      items_pos <- items_pos[1]
+    }
+    if (length(items_neg) > 1) {
+      # Негативны маркеры — дизъюнкция
+      items_neg <- items_neg[1:max_items] |> or() |> str_parenthesise()
+    }
+    if (length(items_pos) > 1) {
+      # Позитивные маркеры — конъюнкция
+      items_pos <- items_pos[1:max_items] |> and() |> str_parenthesise()
+    }
     glue::glue('"{name}": ', paste(items_pos, items_neg, sep = ' vs. '))
   }
 ) |>
@@ -304,12 +321,14 @@ prompts <- ollamar::create_messages(
   system_prompt,
   user_prompt
 )
+
+generate_prompts(scaleset, system_prompt_template, user_prompt_template)
+
 inherits(prompts, 'list')
 ollamar::validate_messages(prompts)
 
 preview <- FALSE
 
-### Hard-coded Prompts ----
 tic()
 resp <- m_backend_submit(
   backend = backend_ll,

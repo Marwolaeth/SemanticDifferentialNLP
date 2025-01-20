@@ -298,6 +298,20 @@ str_parenthesise <- compiler::cmpfun(
   options = list(optimize=3)
 )
 
+and <- function(x) {
+  if (length(x) <= 1) return(x)
+  delims <- c(rep(',', length(x) - 2), ' и', '')
+  paste(paste0(x, delims), collapse = ' ')
+}
+and <- compiler::cmpfun(and, options = list(optimize = 3))
+
+or <- function(x) {
+  if (length(x) <= 1) return(x)
+  delims <- c(rep(',', length(x) - 2), ' или', '')
+  paste(paste0(x, delims), collapse = ' ')
+}
+or <- compiler::cmpfun(or, options = list(optimize = 3))
+
 # Функция для токенизации текста на параграфы
 #' Токенизация текста на параграфы
 #'
@@ -643,7 +657,8 @@ benchmark_similarity <- function(
 generate_prompts <- function(
     scaleset,
     system_prompt_template,
-    user_prompt_template
+    user_prompt_template,
+    max_items = NULL
 ) {
   ## User ----
   n_scales <- length(scaleset)
@@ -655,8 +670,21 @@ generate_prompts <- function(
     names(scaleset),
     function(scale, name) {
       markers <- map(scale, names)
-      items_neg <- map_chr(markers, 1) |> or() |> str_parenthesise()
-      items_pos <- map_chr(markers, 3) |> or() |> str_parenthesise()
+      items_neg <- map_chr(markers, 1)
+      items_pos <- map_chr(markers, 3)
+      if (is.null(max_items)) max_items <- length(items_neg)
+      if (max_items == 1L) {
+        items_neg <- items_neg[1]
+        items_pos <- items_pos[1]
+      }
+      if (length(items_neg) > 1) {
+        # Негативны маркеры — дизъюнкция
+        items_neg <- items_neg[1:max_items] |> or() |> str_parenthesise()
+      }
+      if (length(items_pos) > 1) {
+        # Позитивные маркеры — конъюнкция
+        items_pos <- items_pos[1:max_items] |> and() |> str_parenthesise()
+      }
       glue::glue('"{name}": ', paste(items_pos, items_neg, sep = ' vs. '))
     }
   ) |>
