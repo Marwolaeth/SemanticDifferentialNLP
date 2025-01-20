@@ -204,7 +204,7 @@ system_prompt_template <- paste(
   'If the text does not provide relevant information to assess a given trait,',
   'please assign a rating of 0 for that scale and indicate that the text was insufficient.',
   'Format your output as a JSON string, separating the rating from the explanation.',
-  'Example: {{"инновационность":{{"rating":4,"comment":"Perceived as modern"}},"популярность":{{"rating":0,"comment":"No relevant info"}}}.'
+  'Example: {scaleset_example}.'
 )
 
 scaleset_description <- 'Ку-ку'
@@ -239,15 +239,66 @@ scaleset <- list(
 )
 scale <- scaleset[[1]]
 items <- scale
+item <- items[[1]]
 
 (n_scales <- length(scaleset))
 (scale_names <- and(tolower(names(scaleset))))
 user_prompt <- glue::glue(user_prompt_template)
 
-# '"инновационность": инновационный vs. устаревший,',
-# '"популярность": популярный или модный vs. непопулярный и немодный',
+scaleset_description <- purrr::map2(
+  scaleset,
+  names(scaleset),
+  function(scale, name) {
+    markers <- map(scale, names)
+    items_neg <- map_chr(markers, 1) |> or() |> str_parenthesise()
+    items_pos <- map_chr(markers, 3) |> or() |> str_parenthesise()
+    glue::glue('"{name}": ', paste(items_pos, items_neg, sep = ' vs. '))
+  }
+) |>
+  paste(collapse = ', ')
 
+scaleset_example <- purrr::map2(
+  scaleset,
+  names(scaleset),
+  function(scale, name) {
+    markers <- map(scale, names)
+    rating <- sample(c(-5L, -4L, 0L, 4L, 5L), size = 1)
+    items_neg <- map_chr(markers, 1)
+    items_pos <- map_chr(markers, 3)
+    if (rating  == 0) {
+      comment <- 'The text provides no relevant info'
+    } else {
+      quantifier <- ifelse(abs(rating) == 5, 'очень', 'достаточно')
+      if (rating < 0) {
+        marker <- sample(items_neg, size = 1)
+      } else {
+        marker <- sample(items_pos, size = 1)
+      }
+      comment <- glue::glue(
+        'Из текста можно сделать вывод, что бренд {quantifier} {marker}'
+      )
+    }
+    glue::glue(
+      '"{name}": {{"rating":{rating},"comment":"{comment}"}}'
+    )
+  }
+) |>
+  paste(collapse = ',') |>
+  str_enclose('{')
 
+# {{"инновационность":{{"rating":4,"comment":"Perceived as modern"}},"популярность":{{"rating":0,"comment":"No relevant info"}}}
+
+(system_prompt <- glue::glue(system_prompt_template))
+
+system_prompt <- ollamar::create_message(
+  role = 'system',
+  content = glue::glue(system_prompt_template)
+)
+
+user_prompt <- ollamar::create_message(
+  role = 'user',
+  content = glue::glue(user_prompt_template)
+)
 
 prompts <- ollamar::create_messages(
   system_prompt,
@@ -256,6 +307,20 @@ prompts <- ollamar::create_messages(
 inherits(prompts, 'list')
 ollamar::validate_messages(prompts)
 
+preview <- FALSE
+
+### Hard-coded Prompts ----
+tic()
+resp <- m_backend_submit(
+  backend = backend_ll,
+  # backend = backend_ph,
+  x = sents,
+  prompt = prompts,
+  preview = preview
+)
+toc()
+
+.parse_response(resp)
 
 ## An Simple Experiment ----
 (verbs_data <- c(
