@@ -8,7 +8,27 @@ scaleEditorUI <- function(id) {
   tagList(
     div(
       style = 'border: 2px solid #ccc; padding: 10px; margin-bottom: 10px;',
-      uiOutput(ns('scale_name_ph')),
+      fluidRow(
+        column(
+          width = 11,
+          uiOutput(ns('scale_name_ph'))
+        ),
+        column(
+          1,
+          style='padding-left:0px;',
+          actionButton(
+            ns('delete_scale'),
+            label = '',
+            title = 'Удалить шкалу',
+            icon = icon('trash-can'),
+            style = paste(
+              'margin-top:25px;margin-right:45px;margin-left:0px',
+              'border:none;background:inherit;',
+              sep = ';'
+            )
+          )
+        )
+      ),
       h5('Характеристики:'),
       uiOutput(ns('items')),
       ## Items ----
@@ -99,6 +119,15 @@ scaleEditorServer <- function(id, i, scales_reactive, container) {
     })
     
     # Редактирование ----
+    ## Удаление шкалы ----
+    observeEvent(input$delete_scale, {
+      new_scaleset <- scales_reactive()
+      
+      new_scaleset[[i]] <- NULL
+      
+      container(new_scaleset)
+    })
+    
     ## Добавление характеристик ----
     observeEvent(input$add_item, {
       new_scale <- scale()
