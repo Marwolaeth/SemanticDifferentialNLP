@@ -81,6 +81,7 @@ scaleEditorServer <- function(id, i, scales_reactive, container) {
               actionButton(
                 ns(paste0('delete_item_', j)),
                 label = '',
+                title = 'Удалить пункт',
                 icon = icon('trash-can'),
                 onclick = paste0(
                   "Shiny.setInputValue('", ns("delete_item"), "', ", j, ");"
