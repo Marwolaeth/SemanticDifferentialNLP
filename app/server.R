@@ -2,6 +2,27 @@
 server <- function(input, output, session) {
   ## Интерфейс ----
   
+  ### Проверка ввода ----
+  iv <- InputValidator$new()
+  iv$add_rule('hypothesis_template', sv_required(message = 'Обязательно'))
+  iv$add_rule(
+    'hypothesis-template',
+    sv_regex(
+      pattern = '{brand_name}',
+      fixed = TRUE,
+      message = 'Шаблон должен содержать строки: `{brand_name}` и `{hypothesis}`'
+    )
+  )
+  iv$add_rule(
+    'hypothesis-template',
+    sv_regex(
+      pattern = '{hypothesis}',
+      fixed = TRUE,
+      message = 'Шаблон должен содержать строки: `{brand_name}` и `{hypothesis}`'
+    )
+  )
+  iv$enable()
+  
   ### Выбор моделей в зависимости от метода ----
   models <- reactive({
     if (input$method == 'llm') {
@@ -28,7 +49,7 @@ server <- function(input, output, session) {
     )
   })
   
-  ### Префикс ----
+  ## Префикс ----
   prefix <- reactive({
     req(models)
     req(input$model)
@@ -49,7 +70,15 @@ server <- function(input, output, session) {
   ### Шаблон гипотезы ----
   hypotheses <- reactive({
     req(input$object)
-    glue::glue('{universal_brand_name} – {{}}')
+    req(input$hypothesis_template)
+    
+    stringr::str_replace(
+      input$hypothesis_template,
+      fixed('{brand_name}'),
+      fixed(universal_brand_name)
+    ) |>
+      stringr::str_replace(fixed('{hypothesis}'), fixed('{}'))
+    # glue::glue('{universal_brand_name} – {{}}')
   })
   
   ### Случайный пример ----
@@ -226,7 +255,7 @@ server <- function(input, output, session) {
     
     res
   }) |>
-    bindCache(input$model, input$text, scaleset(), input$method) |>
+    bindCache(input$model, input$text, scaleset(), input$method, hypotheses()) |>
     bindEvent(input$submit)
     
   

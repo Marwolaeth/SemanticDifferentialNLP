@@ -4,8 +4,8 @@ if (!require(devtools)) {
 devtools::install_github(
   c(
     'OscarKjell/text',
-    'rossellhayes/and',
-    'tidyverse/ellmer'
+    'tidyverse/ellmer',
+    'rstudio/shinyvalidate'
   ),
   build = TRUE
 )

@@ -195,6 +195,13 @@ ui <- dashboardPage(
           tabPanel(
             'Классификация',
             value = 'edit-classification',
+            tags$br(),
+            textInput(
+              'hypothesis_template',
+              'Шаблон гипотезы',
+              value = '{brand_name} – {hypothesis}'
+            ),
+            textOutput('hypothesis-preview')
           ),
           ##### Similarity ----
           tabPanel(
