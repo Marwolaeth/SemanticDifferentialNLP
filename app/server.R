@@ -415,7 +415,7 @@ server <- function(input, output, session) {
           headerStyle = list(background = '#DD4B39')
         ),
         columns = list(
-          text = colDef(name = 'Текст'),
+          text = colDef(name = 'Текст', resizable = TRUE),
           scale = colDef(name = 'Шкала', filterable = TRUE),
           items = colDef(name = 'Пункты'),
           .score = colDef(
