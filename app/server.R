@@ -5,6 +5,8 @@ server <- function(input, output, session) {
   ### Проверка ввода ----
   iv <- InputValidator$new()
   
+  iv$add_rule('object', sv_required(message = 'Обязательно'))
+  
   iv$add_rule('hypothesis_template', sv_required(message = 'Обязательно'))
   iv$add_rule(
     'hypothesis_template',
