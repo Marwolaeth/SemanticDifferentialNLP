@@ -640,6 +640,79 @@ benchmark_similarity <- function(
   return(score)
 }
 
+generate_prompts <- function(
+    scaleset,
+    system_prompt_template,
+    user_prompt_template
+) {
+  ## User ----
+  n_scales <- length(scaleset)
+  scale_names <- and(tolower(names(scaleset)))
+  
+  ## System ----
+  scaleset_description <- purrr::map2(
+    scaleset,
+    names(scaleset),
+    function(scale, name) {
+      markers <- map(scale, names)
+      items_neg <- map_chr(markers, 1) |> or() |> str_parenthesise()
+      items_pos <- map_chr(markers, 3) |> or() |> str_parenthesise()
+      glue::glue('"{name}": ', paste(items_pos, items_neg, sep = ' vs. '))
+    }
+  ) |>
+    paste(collapse = ', ')
+  
+  scaleset_example <- purrr::map2(
+    scaleset,
+    names(scaleset),
+    function(scale, name) {
+      markers <- map(scale, names)
+      rating <- sample(c(-5L, -4L, 0L, 4L, 5L), size = 1)
+      items_neg <- map_chr(markers, 1)
+      items_pos <- map_chr(markers, 3)
+      if (rating  == 0) {
+        comment <- 'The text provides no relevant info'
+      } else {
+        quantifier <- ifelse(abs(rating) == 5, 'очень', 'достаточно')
+        if (rating < 0) {
+          marker <- sample(items_neg, size = 1)
+        } else {
+          marker <- sample(items_pos, size = 1)
+        }
+        comment <- glue::glue(
+          'Из текста можно сделать вывод, что бренд {quantifier} {marker}'
+        )
+      }
+      glue::glue(
+        '"{name}": {{"rating":{rating},"comment":"{comment}"}}'
+      )
+    }
+  ) |>
+    paste(collapse = ',') |>
+    str_enclose('{')
+  
+  ## Сборка ----
+  system_prompt <- ollamar::create_message(
+    role = 'system',
+    content = glue::glue(system_prompt_template)
+  )
+  
+  user_prompt <- ollamar::create_message(
+    role = 'user',
+    content = glue::glue(user_prompt_template)
+  )
+  
+  prompts <- ollamar::create_messages(
+    system_prompt,
+    user_prompt
+  )
+  
+  ## Проверка ----
+  stopifnot(inherits(prompts, 'list'))
+  stopifnot(ollamar::validate_messages(prompts))
+  return(prompts)
+}
+
 ### Wrapper Functions ----
 # Функция для обработки нескольких текстов с нулевым обучением
 # Функция для семантического дифференциала с нулевым обучением (векторизированная)
