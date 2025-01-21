@@ -195,18 +195,21 @@ toc()
 
 #### System ----
 
-system_prompt_template <- paste(
-  'You are a skillful content analysis engine model tailored',
-  'for brand analytics. Your task is to assess the image of a given brand',
-  'based on any provided text in Russian that mentions the brand name (substituted as "{universal_brand_name}"), which may include',
-  'news articles, summaries, blog posts, press releases, or tweets.',
-  'Your output should include ratings on various semantic scales (e.g.,',
-  '{scaleset_description}',
-  'on a scale from -5 to 5.',
-  'If the text does not provide relevant information to assess a given trait,',
-  'please assign a rating of 0 for that scale and indicate that the text was insufficient.',
-  'Format your output as a JSON string, separating the rating from the explanation.',
-  'Example: {scaleset_example}.'
+system_prompt_template <- paste0(
+  'You are a skillful content analysis engine model tailored ',
+  'for brand analytics. Your task is to assess the image of a given brand ',
+  'based on any provided text in Russian that mentions the brand name (substituted as "{universal_brand_name}"), which may include ',
+  'news articles, summaries, blog posts, press releases, or tweets.\n',
+  'Your output should include ratings on various semantic scales (e.g., ',
+  '{scaleset_description} ',
+  'on a scale from 5 to -5.\n',
+  'If the text does not provide relevant information to assess a given trait, ',
+  'please assign a rating of 0 for that scale and indicate that the text was insufficient. Do not fantasise. No information means 0.\n',
+  'Please double check the sign of your rating. Is it positive or negative?\n',
+  'Format the output as a JSON string, separating the rating from the explanation.\n',
+  'Example: {scaleset_example}.\n',
+  'You are very rigorous. Please double-check your response format and all ',
+  'the braces: it must be a valid JSON.'
 )
 
 scaleset_description <- 'Ку-ку'
@@ -217,7 +220,12 @@ glue::glue(system_prompt_template) |> cat()
 user_prompt_template <- paste(
   'Please assess the following text for brand image on {n_scales} scales.',
   'Сосредоточьтесь на следующих аспектах: {scale_names}.',
-  'Пожалуйста, предоставьте результаты в формате JSON, упаковывая оценки по каждому аспекту.',
+  'Please focus on each aspect one at a time.',
+  # 'Please double-check the sign of rating you assing: is it positive or negative?',
+  'Be sure to always assign 0 if you have not enough information,',
+  'and do not fantasise.',
+  'Пожалуйста, предоставьте результаты в формате JSON, упаковывая оценки по каждому аспекту. Please double-check your response format and all the braces:',
+  'it must be a valid JSON.',
   'Текст:'
 )
 
@@ -322,13 +330,26 @@ prompts <- ollamar::create_messages(
   user_prompt
 )
 
-generate_prompts(scaleset, system_prompt_template, user_prompt_template)
+### Тест ----
+
+prompts <- generate_prompts(
+  scaleset,
+  system_prompt_template,
+  user_prompt_template
+)
+
+prompts <- generate_prompts(
+  scaleset,
+  system_prompt_template,
+  user_prompt_template,
+  max_items = 1
+)
 
 inherits(prompts, 'list')
 ollamar::validate_messages(prompts)
 
-preview <- FALSE
-
+# preview <- FALSE
+# 
 tic()
 resp <- m_backend_submit(
   backend = backend_ll,
@@ -339,7 +360,35 @@ resp <- m_backend_submit(
 )
 toc()
 
-.parse_response(resp)
+# .parse_response(resp)
+
+tic()
+res <- semdiff_chat(sents, backend_ll, prompts = prompts, names(scaleset))
+toc()
+
+tic()
+res <- semdiff_chat(
+  'Y – определенно самая инновационная компания в мире на данный момент.',
+  backend_ll,
+  prompts = prompts,
+  names(scaleset)
+)
+toc()
+
+# .parse_response(res[[5]])
+# 
+# result <- .parse_response(res)
+# 
+result <- map(res, safely(.parse_response)) |>
+  # flatten() |>
+  transpose() |>
+  map(\(x) map(x, as_tibble) |> bind_rows() |> rename(.score = rating))
+
+lapply(seq_along(res), function(scale_i) {
+  scale_name <- names(res)[scale_i]
+  value <- mean(res[[scale_name]][['.score']])
+  list(value) |> set_names(scale_name)
+})
 
 ## An Simple Experiment ----
 (verbs_data <- c(

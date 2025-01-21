@@ -185,7 +185,19 @@ server <- function(input, output, session) {
       scaleset()
     )
   
-  ### Анализ ----
+  ### Чат-модели ----
+  backend <- reactive({
+    req(input$method == 'llm')
+    
+    model_name <- names(models()[as.numeric(input$model)])
+    print(model_name)
+    
+    ollamar::pull(model_name)
+    
+    mall::llm_use('ollama', model_name, seed = input$seed)
+  })
+  
+  ## Анализ ----
   result <- reactive({
     req(input$object)
     req(input$model)
@@ -193,11 +205,11 @@ server <- function(input, output, session) {
     req(hypotheses)
     req(prefix)
     
-    #### Получение модели ----
+    ### Получение модели ----
     model_name <- names(models()[as.numeric(input$model)])
     print(model_name)
     
-    #### Универсальное название ----
+    ### Универсальное название ----
     if (stringr::str_detect(input$object, fixed(','))) {
       objects <- input$object |>
         stringr::str_split(fixed(',')) |>
@@ -212,7 +224,7 @@ server <- function(input, output, session) {
     print(text)
     print(hypotheses())
     
-    #### Функции анализа ----
+    ### Функции анализа ----
     tictoc::tic('Analysing sigle text')
     withProgress(
       session = session,
@@ -253,7 +265,7 @@ server <- function(input, output, session) {
               message = 'Анализируем',
               detail = names(scaleset())[[i]]
             )
-            ##### NLI ----
+            #### NLI ----
             if (input$method == 'classification') {
               scale_result <- semdiff_zeroshot_map(
                 text,
@@ -265,7 +277,7 @@ server <- function(input, output, session) {
                 seed = input$seed,
                 device = tolower(input$device)
               ) 
-            ##### Similarity ----
+            #### Similarity ----
             } else if (input$method == 'similarity') {
               scale_result <- semdiff_similarity(
                 text_embeddings = text_embeddings,

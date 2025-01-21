@@ -5,6 +5,7 @@ library(tibble)
 library(tidyr)
 library(dplyr)
 library(SnowballC)
+library(mall)
 
 compiler::enableJIT(3)
 
@@ -695,7 +696,11 @@ generate_prompts <- function(
     names(scaleset),
     function(scale, name) {
       markers <- map(scale, names)
-      rating <- sample(c(-5L, -4L, 0L, 4L, 5L), size = 1)
+      rating <- sample(
+        c(-5L, -4L, 0L, 4L, 5L),
+        size = 1,
+        prob = c(1, 1, 2, 1, 1)
+      )
       items_neg <- map_chr(markers, 1)
       items_pos <- map_chr(markers, 3)
       if (rating  == 0) {
@@ -739,6 +744,93 @@ generate_prompts <- function(
   stopifnot(inherits(prompts, 'list'))
   stopifnot(ollamar::validate_messages(prompts))
   return(prompts)
+}
+
+m_backend_submit.mall_ollama <- function(backend, x, prompt, preview = FALSE) {
+  if (preview) {
+    x <- head(x, 1)
+    map_here <- purrr::map
+  } else {
+    map_here <- purrr::map_chr
+  }
+  map_here(
+    x,
+    \(x) {
+      .args <- c(
+        messages = purrr::map(
+          prompt,
+          function(p) {
+            if (p[['role']] == 'user') {
+              p[['content']] <- paste(p[['content']], x, sep = '\n')
+            }
+            p
+          }
+        ) |> list(),
+        output = "text",
+        mall:::m_defaults_args(backend)
+      )
+      res <- NULL
+      if (preview) {
+        res <- rlang::expr(ollamar::chat(!!!.args))
+      }
+      if (mall:::m_cache_use() && is.null(res)) {
+        hash_args <- rlang::hash(.args)
+        res <- mall:::m_cache_check(hash_args)
+      }
+      if (is.null(res)) {
+        require(ollamar)
+        res <- rlang::exec("chat", !!!.args)
+        mall:::m_cache_record(.args, res, hash_args)
+      }
+      res
+    }
+  )
+}
+
+.parse_response <- function(response, simplify = FALSE) {
+  starts <- stringr::str_locate(response, stringr::fixed('{'))[,1, drop = FALSE]
+  ends <- stringr::str_locate_all(response, stringr::fixed('}'))
+  ends <- purrr::map_vec(
+    ends,
+    \(e) end = e[nrow(e), ncol(e), drop = FALSE]
+  )
+  locs <- cbind(start = starts, end = ends)
+  responses <- stringr::str_sub(response, start = locs)
+  jsonlite::fromJSON(
+    paste0(
+      '[',
+      paste(responses, collapse = ','),
+      ']'
+    ),
+    simplifyDataFrame = simplify
+  )
+}
+
+.parse_tibble <- function(resp) {
+  fake_tibble <- tibble::tibble(
+    .score = 0, comment = 'The model failed to provide valid JSON'
+  )
+  
+  result <- purrr::map(
+    resp,
+    purrr::safely(.parse_response)
+  )
+  
+  res <- purrr::map(
+    result,
+    function(x) {
+      if (!is.null(x$error)) {
+        fake_tibble 
+      } else {
+        purrr::map(
+          x$result[[1]],
+          \(y) as_tibble(y) |> dplyr::rename(.score = rating)
+        )
+      }
+    }
+  ) |>
+    purrr::transpose() |>
+    purrr::map(dplyr::bind_rows)
 }
 
 ### Wrapper Functions ----
@@ -887,6 +979,22 @@ semdiff_similarity <- function(
     items = paste(names(norm_embeddings$texts), collapse = ' – '),
     .score = score
   )
+}
+
+semdiff_chat <- function(
+    texts,
+    backend,
+    prompts,
+    scale_names
+) {
+  resp <- m_backend_submit(
+    backend = backend,
+    x = texts,
+    prompt = prompts,
+    preview = FALSE
+  )
+  
+  .parse_tibble(resp) |> purrr::set_names(scale_names)
 }
 
 ## Results Processing ----
