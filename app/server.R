@@ -45,7 +45,7 @@ server <- function(input, output, session) {
   ### Выбор моделей в зависимости от метода ----
   models <- reactive({
     if (input$method == 'llm') {
-      c('Llama 3.2' = 1)
+      c('llama3.2' = 1, 'phi4' = 2)
     } else {
       models_df |>
         dplyr::filter(

@@ -17,7 +17,7 @@ ollamar::pull('phi4')
 
 # llm_use('ollama', 'llama3.2', seed = 111, messages = messages)
 backend_ll <- llm_use('ollama', 'llama3.2', seed = 111L)
-backend_ph <- llm_use('ollama', 'Phi4', seed = 111L)
+backend_ph <- llm_use('ollama', 'phi4', seed = 111L)
 
 ### Prompts ----
 
@@ -369,7 +369,7 @@ toc()
 tic()
 res <- semdiff_chat(
   'Y – определенно самая инновационная компания в мире на данный момент.',
-  backend_ll,
+  backend_ph,
   prompts = prompts,
   names(scaleset)
 )
