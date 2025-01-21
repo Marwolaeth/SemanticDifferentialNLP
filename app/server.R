@@ -271,7 +271,7 @@ server <- function(input, output, session) {
                 text_embeddings = text_embeddings,
                 norm_embeddings = scaleset_norms()[[i]],
                 similarity_metric = input$similarity_metric,
-                temperature = 30,
+                temperature = 10,
                 use_softmax = T # Check
               )
             }
