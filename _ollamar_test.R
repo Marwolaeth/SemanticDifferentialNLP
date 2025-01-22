@@ -5,7 +5,7 @@ model_avail('deepseek-r1:7b')
 model_avail('deepseek-r1:1.5b')
 
 ollamar::pull('deepseek-r1:1.5b')
-
+ollamar::pull('deepseek-r1:7b')
 
 # text <- sents[[1]]
 text <- 'Y тупая и отсталая контора.'
