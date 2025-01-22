@@ -44,7 +44,7 @@ server <- function(input, output, session) {
   
   ### Выбор моделей в зависимости от метода ----
   models <- reactive({
-    if (input$method == 'llm') {
+    if (input$method == 'chat') {
       chat_models
     } else {
       models_df |>
@@ -190,7 +190,7 @@ server <- function(input, output, session) {
   ### Чат-модели ----
   #### Выбор модели ----
   backend <- reactive({
-    req(input$method == 'llm')
+    req(input$method == 'chat')
     
     model_name <- names(models()[as.numeric(input$model)])
     print(model_name)
@@ -244,7 +244,7 @@ server <- function(input, output, session) {
     tictoc::tic('Analysing sigle text')
     
     #### Chat models ----
-    if (input$method == 'llm') {
+    if (input$method == 'chat') {
       res <- semdiff_chat(
         text,
         backend = backend(),

@@ -34,9 +34,9 @@ ui <- dashboardPage(
         'method',
         label = 'Метод оценки',
         choices = list(
-          'Классификация' = 'classification',
+          'Нулевая классификация' = 'classification',
           'Семантическая близость' = 'similarity',
-          'Искусственный интеллект' = 'llm'
+          'Искусственный интеллект' = 'chat'
         ),
         selected = 'classification'
       ),
@@ -243,10 +243,10 @@ ui <- dashboardPage(
               width = '80%'
             )
           ),
-          ##### LLM ----
+          ##### Chat ----
           tabPanel(
-            'Искусственный интеллект',
-            value = 'edit-llm'
+            'Чат-модели',
+            value = 'edit-chat'
           )
         )
       ),
