@@ -1054,3 +1054,20 @@ show_scales_result <- function(result) {
     purrr::map(result, show_scales_result)
   }
 }
+
+## UI ----
+with_red_spinner <- function(
+    ui_element,
+    size = 1.8,
+    caption = 'Pending Evaluation'
+) {
+  shinycssloaders::withSpinner(
+    ui_element,
+    type = 2,
+    color = '#d73925',
+    color.background = '#ECF0F5',
+    hide.ui = FALSE,
+    size = size,
+    caption = caption
+  )
+}

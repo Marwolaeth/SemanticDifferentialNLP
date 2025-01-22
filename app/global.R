@@ -2,6 +2,7 @@
 library(shiny)
 library(shinyjs)
 library(shinyvalidate)
+library(shinycssloaders)
 library(readxl)
 library(glue)
 library(stringr)

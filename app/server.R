@@ -342,7 +342,11 @@ server <- function(input, output, session) {
   output$gauges <- renderUI({
     req(input$submit)
     gauges <- lapply(seq_along(result()), function(scale_i) {
-      gaugeOutput(outputId = paste0('gauge_', scale_i), width = '100%')
+      with_red_spinner(
+        gaugeOutput(outputId = paste0('gauge_', scale_i), width = '100%'),
+        size = 1.5,
+        caption = 'Идет анализ'
+      )
     })
     # Generate columns of equal width
     wd = 12 / length(gauges)

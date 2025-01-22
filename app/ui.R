@@ -120,7 +120,11 @@ ui <- dashboardPage(
             tabPanel(
               'Просмотр расчетов',
               value = 'scales_output_raw',
-              verbatimTextOutput('result')
+              with_red_spinner(
+                verbatimTextOutput('result'),
+                size = 2,
+                caption = NULL
+              )
             )
           )
         )

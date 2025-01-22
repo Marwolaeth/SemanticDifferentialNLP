@@ -5,7 +5,8 @@ devtools::install_github(
   c(
     'OscarKjell/text',
     'tidyverse/ellmer',
-    'rstudio/shinyvalidate'
+    'rstudio/shinyvalidate',
+    'daattali/shinycssloaders'
   ),
   build = TRUE
 )
