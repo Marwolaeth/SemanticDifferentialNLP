@@ -18,6 +18,7 @@ ollamar::pull('phi4')
 # llm_use('ollama', 'llama3.2', seed = 111, messages = messages)
 backend_ll <- llm_use('ollama', 'llama3.2', seed = 111L)
 backend_ph <- llm_use('ollama', 'phi4', seed = 111L)
+backend_ds <- llm_use('ollama', 'deepseek-r1:1.5b', seed = 111L)
 
 ### Prompts ----
 
@@ -368,12 +369,40 @@ toc()
 
 tic()
 res <- semdiff_chat(
-  'Y – определенно самая инновационная компания в мире на данный момент.',
-  backend_ph,
+  sents,
+  # backend_ds,
+  backend_ll,
   prompts = prompts,
-  names(scaleset)
+  names(scaleset),
+  trust_model_output = FALSE
 )
 toc()
+
+tic()
+res <- semdiff_chat(
+  'Y – определенно самая инновационная компания в мире на данный момент.',
+  backend_ds,
+  prompts = prompts,
+  names(scaleset),
+  trust_model_output = FALSE
+)
+toc()
+
+tic()
+resp <- m_backend_submit(
+  backend = backend_ds,
+  # backend = backend_ph,
+  # x = 'Y – определенно самая инновационная компания в мире на данный момент.',
+  x = sents,
+  prompt = prompts,
+  preview = FALSE
+)
+toc()
+.parse_response(
+  str_replace_all(resp, '(?<!\\")([A-Za-z\\s]+)', '\\"\\1\\"')
+)
+
+.parse_garbage(resp)
 
 # .parse_response(res[[5]])
 # 

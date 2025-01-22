@@ -824,13 +824,48 @@ m_backend_submit.mall_ollama <- function(backend, x, prompt, preview = FALSE) {
       } else {
         purrr::map(
           x$result[[1]],
-          \(y) as_tibble(y) |> dplyr::rename(.score = rating)
+          \(y) as_tibble(y) |>
+            dplyr::rename(.score = rating) |>
+            dplyr::mutate(.score = .score / 5)
         )
       }
     }
   ) |>
     purrr::transpose() |>
     purrr::map(dplyr::bind_rows)
+}
+
+.parse_garbage <- function(resp) {
+  fake_tibble <- tibble::tibble(
+    .score = 0, comment = 'The model failed to provide valid JSON'
+  )
+  
+  scores <- stringr::str_extract_all(resp, '(?<=rating\\"?\\:\\s?)\\-?\\d') |>
+    purrr::transpose()
+  comments <- resp |>
+    stringr::str_squish() |>
+    stringr::str_extract_all('(?<=comment\\"?\\:).+?(?=\\})') |>
+    purrr::map(
+      \(t) stringr::str_squish(t) |> stringr::str_remove_all("[\"\']")
+    ) |>
+    purrr::transpose()
+  
+  lapply(
+    1:length(scores),
+    function(i) {
+      tryCatch(
+        {
+          score <- as.numeric(unlist(scores[[i]]))
+          score <- ifelse(is.na(score), 0, score)
+          tibble::tibble(
+            .score = score / 5,
+            comment = unlist(comments[[i]])
+          )
+        },
+        error = function(e) fake_tibble
+      )
+    }
+  )
 }
 
 ### Wrapper Functions ----
@@ -985,7 +1020,8 @@ semdiff_chat <- function(
     texts,
     backend,
     prompts,
-    scale_names
+    scale_names,
+    trust_model_output = TRUE
 ) {
   resp <- m_backend_submit(
     backend = backend,
@@ -994,7 +1030,14 @@ semdiff_chat <- function(
     preview = FALSE
   )
   
-  .parse_tibble(resp) |> purrr::set_names(scale_names)
+  # Модели часто ошибаются в JSON
+  if (trust_model_output) {
+    output <- .parse_tibble(resp)
+  } else {
+    output <- .parse_garbage(resp)
+  }
+  
+  purrr::set_names(output, scale_names)
 }
 
 ## Results Processing ----

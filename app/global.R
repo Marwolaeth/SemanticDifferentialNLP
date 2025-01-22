@@ -7,6 +7,7 @@ library(glue)
 library(stringr)
 library(tictoc)
 library(reactable)
+library(ollamar)
 
 source('functions.R', encoding = 'UTF-8')
 
@@ -17,6 +18,10 @@ examples <- read_excel('../data/umbrella-sentences.xlsx')
 
 ## Список моделей ----
 load('../data/models/models.RData')
+chat_models <- ollamar::list_models(output = 'df') |>
+  dplyr::mutate(model = dplyr::row_number()) |>
+  dplyr::select(name, model) |>
+  tibble::deframe()
 
 ## Единый объект для оценки ----
 universal_brand_name <- 'Y'
@@ -32,7 +37,7 @@ default_system_prompt_template <- paste0(
   'based on any provided text in Russian that mentions the brand name (substituted as "{universal_brand_name}"), which may include ',
   'news articles, summaries, blog posts, press releases, or tweets.\n',
   'Your output should include ratings on various semantic scales (e.g., ',
-  '{scaleset_description} ',
+  '{scaleset_description}) ',
   'on a scale from 5 to -5.\n',
   'If the text does not provide relevant information to assess a given trait, ',
   'please assign a rating of 0 for that scale and indicate that the text was insufficient. Do not fantasise. No information means 0.\n',

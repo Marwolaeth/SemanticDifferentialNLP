@@ -45,7 +45,7 @@ server <- function(input, output, session) {
   ### Выбор моделей в зависимости от метода ----
   models <- reactive({
     if (input$method == 'llm') {
-      c('llama3.2' = 1, 'phi4' = 2)
+      chat_models
     } else {
       models_df |>
         dplyr::filter(
@@ -68,39 +68,7 @@ server <- function(input, output, session) {
     )
   })
   
-  ## Префикс ----
-  prefix <- reactive({
-    req(models)
-    req(input$model)
-    model_name <- names(models()[as.numeric(input$model)])
-    
-    # Добавим префиксы, если модель их принимает
-    stringr::str_detect(
-      model_name,
-      '([Ss]enten)|([Ss][Bb][Ee][Rr][Tt])|(s\\-encoder)'
-    )
-  })
-  
-  ## Хранение истории ----
-  eval_history <- reactiveVal(tibble::tibble())
-  
-  ## Обработка ----
-  
-  ### Шаблон гипотезы ----
-  hypotheses <- reactive({
-    req(input$object)
-    req(input$hypothesis_template)
-    
-    stringr::str_replace(
-      input$hypothesis_template,
-      fixed('{brand_name}'),
-      fixed(universal_brand_name)
-    ) |>
-      stringr::str_replace(fixed('{hypothesis}'), fixed('{}'))
-    # glue::glue('{universal_brand_name} – {{}}')
-  })
-  
-  ### Случайный пример ----
+  ## Случайный пример ----
   observeEvent(input$example, {
     if (stringr::str_detect(input$object, fixed(','))) {
       objects <- input$object |>
@@ -129,7 +97,41 @@ server <- function(input, output, session) {
     )
   })
   
-  ### Нормы ----
+  ## Префикс ----
+  prefix <- reactive({
+    req(models)
+    req(input$model)
+    model_name <- names(models()[as.numeric(input$model)])
+    
+    # Добавим префиксы, если модель их принимает
+    stringr::str_detect(
+      model_name,
+      '([Ss]enten)|([Ss][Bb][Ee][Rr][Tt])|(s\\-encoder)'
+    )
+  })
+  
+  ## Хранение истории ----
+  eval_history <- reactiveVal(tibble::tibble())
+  
+  ## Обработка ----
+  
+  ### NLI ----
+  #### Шаблон гипотезы ----
+  hypotheses <- reactive({
+    req(input$object)
+    req(input$hypothesis_template)
+    
+    stringr::str_replace(
+      input$hypothesis_template,
+      fixed('{brand_name}'),
+      fixed(universal_brand_name)
+    ) |>
+      stringr::str_replace(fixed('{hypothesis}'), fixed('{}'))
+    # glue::glue('{universal_brand_name} – {{}}')
+  })
+  
+  ### Similarity ----
+  #### Нормы ----
   scaleset_norms <- reactive({
     req(input$method == 'similarity')
     req(input$model)
@@ -186,16 +188,30 @@ server <- function(input, output, session) {
     )
   
   ### Чат-модели ----
+  #### Выбор модели ----
   backend <- reactive({
     req(input$method == 'llm')
     
     model_name <- names(models()[as.numeric(input$model)])
     print(model_name)
     
-    ollamar::pull(model_name)
-    
     mall::llm_use('ollama', model_name, seed = input$seed)
   })
+  
+  #### Промпты ----
+  prompts <- reactive({
+    sp <- generate_prompts(
+      scaleset(),
+      system_prompt_template = default_system_prompt_template,
+      user_prompt_template = default_user_prompt_template,
+      max_items = 1L
+    )
+    
+    print(sp)
+    
+    sp
+  })
+  
   
   ## Анализ ----
   result <- reactive({
@@ -226,72 +242,84 @@ server <- function(input, output, session) {
     
     ### Функции анализа ----
     tictoc::tic('Analysing sigle text')
-    withProgress(
-      session = session,
-      message = 'Анализируем…',
-      {
-        # Get text embeddings and other parameters once
-        if (input$method == 'similarity') {
-          if (input$similarity_aggregation == 'auto') {
-            aggregation <- ifelse(prefix(), 'cls', 'token')
-          } else {
-            aggregation <- input$similarity_aggregation
-          }
-          
-          tic(msg = 'Embedding text')
-          
-          prgrphs <- paragraphs(text)
-          if (prefix()) prgrphs <- paste('classification:', prgrphs)
-          
-          incProgress(
-            1 / (length(scaleset())^2),
-            message = 'Векторизация текста',
-          )
-          text_embeddings <- text_embed(
-            prgrphs,
-            model = model_name,
-            aggregation_from_tokens_to_texts = aggregation,
-            select_token = universal_brand_name,
-            device = tolower(input$device)
-          )
-          toc()
-        }
-        res <- purrr::map2(
-          scaleset(),
-          seq_along(scaleset()),
-          function(semantic_scale, i) {
-            incProgress(
-              1 / length(scaleset()),
-              message = 'Анализируем',
-              detail = names(scaleset())[[i]]
-            )
-            #### NLI ----
-            if (input$method == 'classification') {
-              scale_result <- semdiff_zeroshot_map(
-                text,
-                model_name,
-                items = semantic_scale,
-                template = hypotheses(),
-                prefix = prefix(),
-                append_neutral = TRUE,
-                seed = input$seed,
-                device = tolower(input$device)
-              ) 
-            #### Similarity ----
-            } else if (input$method == 'similarity') {
-              scale_result <- semdiff_similarity(
-                text_embeddings = text_embeddings,
-                norm_embeddings = scaleset_norms()[[i]],
-                similarity_metric = input$similarity_metric,
-                temperature = 10,
-                use_softmax = T # Check
-              )
+    
+    #### Chat models ----
+    if (input$method == 'llm') {
+      res <- semdiff_chat(
+        text,
+        backend = backend(),
+        prompts = prompts(),
+        scale_names = names(scaleset()),
+        trust_model_output = FALSE
+      )
+    } else {
+      withProgress(
+        session = session,
+        message = 'Анализируем…',
+        {
+          # Get text embeddings and other parameters once
+          if (input$method == 'similarity') {
+            if (input$similarity_aggregation == 'auto') {
+              aggregation <- ifelse(prefix(), 'cls', 'token')
+            } else {
+              aggregation <- input$similarity_aggregation
             }
-            return(scale_result)
+            
+            tic(msg = 'Embedding text')
+            
+            prgrphs <- paragraphs(text)
+            if (prefix()) prgrphs <- paste('classification:', prgrphs)
+            
+            incProgress(
+              1 / (length(scaleset())^2),
+              message = 'Векторизация текста',
+            )
+            text_embeddings <- text_embed(
+              prgrphs,
+              model = model_name,
+              aggregation_from_tokens_to_texts = aggregation,
+              select_token = universal_brand_name,
+              device = tolower(input$device)
+            )
+            toc()
           }
-        ) |>
-          purrr::set_names(names(scaleset()))
-      })
+          res <- purrr::map2(
+            scaleset(),
+            seq_along(scaleset()),
+            function(semantic_scale, i) {
+              incProgress(
+                1 / length(scaleset()),
+                message = 'Анализируем',
+                detail = names(scaleset())[[i]]
+              )
+              #### NLI ----
+              if (input$method == 'classification') {
+                scale_result <- semdiff_zeroshot_map(
+                  text,
+                  model_name,
+                  items = semantic_scale,
+                  template = hypotheses(),
+                  prefix = prefix(),
+                  append_neutral = TRUE,
+                  seed = input$seed,
+                  device = tolower(input$device)
+                ) 
+                #### Similarity ----
+              } else if (input$method == 'similarity') {
+                scale_result <- semdiff_similarity(
+                  text_embeddings = text_embeddings,
+                  norm_embeddings = scaleset_norms()[[i]],
+                  similarity_metric = input$similarity_metric,
+                  temperature = 10,
+                  use_softmax = T # Check
+                )
+              }
+              return(scale_result)
+            }
+          ) |>
+            purrr::set_names(names(scaleset()))
+        })
+    }
     tictoc::toc()
     
     res
