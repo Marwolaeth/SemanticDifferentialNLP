@@ -39,7 +39,7 @@ ui <- dashboardPage(
           'Искусственный интеллект' = 'chat'
         ),
         selected = 'classification'
-      ),
+      ) |> with_helper('methods'),
       uiOutput('model'),
       radioButtons(
         'device',
@@ -53,7 +53,7 @@ ui <- dashboardPage(
         min = 1,
         max = 11111,
         value = 111
-      )
+      ) |> with_helper('seed')
     )
   ),
   
@@ -204,7 +204,7 @@ ui <- dashboardPage(
               'hypothesis_template',
               'Шаблон гипотезы',
               value = '{brand_name} – {hypothesis}'
-            ),
+            ) |> with_helper('hypothesis-template'),
             tags$strong('Предпросмотр: '),
             tags$div(
               textOutput(
@@ -222,7 +222,7 @@ ui <- dashboardPage(
               'similarity_group_items',
               label = 'Объединять элементы шкалы в одну фразу',
               value = FALSE
-            ),
+            ) |> with_helper('group-items'),
             radioButtons(
               'similarity_aggregation',
               label = 'Метод агрегирования',
@@ -232,7 +232,7 @@ ui <- dashboardPage(
                 'Среднее по токенам'  = 'mean',
                 'Токен объекта'       = 'token'
               )
-            ),
+            ) |> with_helper('aggregation'),
             radioButtons(
               'similarity_metric',
               label = 'Метрика расстояния',

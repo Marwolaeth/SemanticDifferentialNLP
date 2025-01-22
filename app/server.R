@@ -1,5 +1,7 @@
 ## SERVER ----
 server <- function(input, output, session) {
+  observe_helpers(withMathJax = TRUE)
+  
   ## Интерфейс ----
   
   ### Проверка ввода ----

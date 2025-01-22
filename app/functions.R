@@ -1071,3 +1071,15 @@ with_red_spinner <- function(
     caption = caption
   )
 }
+
+with_helper <- function(ui_element, content) {
+  helper(
+    ui_element,
+    colour = '#d73925',
+    type = 'markdown',
+    content = content,
+    buttonLabel = 'Понятно',
+    easyClose = TRUE,
+    fade = TRUE
+  )
+}
