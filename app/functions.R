@@ -92,7 +92,7 @@ text_embed_raw <- function(
     texts,
     model,
     device = 'cpu',
-    tokenizer_parallelism = FALSE,
+    tokenizer_parallelism = TRUE,
     trust_remote_code = TRUE,
     logging_level = 'error',
     max_token_to_sentence = 30
