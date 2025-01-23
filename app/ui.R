@@ -205,7 +205,7 @@ ui <- dashboardPage(
               'Шаблон гипотезы',
               value = '{brand_name} – {hypothesis}'
             ) |> with_helper('hypothesis-template'),
-            tags$strong('Предпросмотр: '),
+            h4('Предпросмотр: '),
             tags$div(
               textOutput(
                 'hypothesis_preview',
@@ -237,11 +237,11 @@ ui <- dashboardPage(
               'similarity_metric',
               label = 'Метрика расстояния',
               choices = c(
-                'Косинусная близость / Корреляция Пирсона' = 'cosine',
+                'Косинусная близость' = 'cosine',
                 'Корреляция Спирмена' = 'spearman'
               ),
               width = '80%'
-            )
+            ) |> with_helper('metrics')
           ),
           ##### Chat ----
           tabPanel(
