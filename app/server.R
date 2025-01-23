@@ -347,7 +347,7 @@ server <- function(input, output, session) {
       with_red_spinner(
         gaugeOutput(outputId = paste0('gauge_', scale_i), width = '100%'),
         size = 1.5,
-        caption = 'Идет анализ'
+        caption = NULL
       )
     })
     # Generate columns of equal width
