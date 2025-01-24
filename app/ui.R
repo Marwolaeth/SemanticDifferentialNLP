@@ -133,28 +133,6 @@ ui <- dashboardPage(
       tabItem(
         tabName = 'settings',
         h2('Редактирование семантических шкал'),
-        ##### Экспорт и импорт ----
-        fluidRow(
-          column(
-            6,
-            downloadButton(
-              'download_scaleset',
-              'Экспортировать шкалы',
-              class = 'btn-success',
-              style = 'margin-top:25px;'
-            )
-          ),
-          column(
-            6,
-            fileInput(
-              'upload_scaleset',
-              'Импортировать шкалы',
-              accept = c('.sds', '.RData'),
-              buttonLabel = 'Обзор…',
-              placeholder = 'Файл не выбран'
-            )
-          )
-        ),
         ##### Редактирование ----
         tabsetPanel(
           tabPanel(
@@ -187,6 +165,29 @@ ui <- dashboardPage(
             'Предпросмотр',
             value = 'edit-scales-preview',
             verbatimTextOutput('scales_output')
+          )
+        ),
+        tags$br(),
+        ##### Экспорт и импорт ----
+        fluidRow(
+          column(
+            6,
+            downloadButton(
+              'download_scaleset',
+              'Экспортировать шкалы',
+              class = 'btn-success',
+              style = 'margin-top:25px;'
+            )
+          ),
+          column(
+            6,
+            fileInput(
+              'upload_scaleset',
+              'Импортировать шкалы',
+              accept = c('.sds', '.RData'),
+              buttonLabel = 'Обзор…',
+              placeholder = 'Файл не выбран'
+            )
           )
         )
       ),
@@ -308,6 +309,7 @@ ui <- dashboardPage(
               )
             ),
             
+            tags$br(),
             ###### Экспорт и импорт ----
             fluidRow(
               column(
