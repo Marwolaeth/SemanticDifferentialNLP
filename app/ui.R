@@ -258,7 +258,7 @@ ui <- dashboardPage(
             fluidRow(
               column(
                 6,
-                h4('Редактирование инструкций'),
+                h4('Редактирование инструкций') |> with_helper('prompts'),
                 textAreaInput(
                   inputId = 'chat_system_prompt',
                   label = 'Системная инструкция',
