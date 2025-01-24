@@ -295,23 +295,36 @@ server <- function(input, output, session) {
     req(input$upload_prompts)
     
     prompts_data <- new.env()
-    load(input$upload_prompts$datapath, envir = prompts_data)
-    
-    new_promts <- get(ls(prompts_data)[1], envir = prompts_data)
-    
-    system_prompt <- new_promts[['system']]
-    user_prompt   <- new_promts[['user']]
-    
-    updateTextAreaInput(
-      session = session,
-      inputId = 'chat_system_prompt',
-      value = system_prompt
-    )
-    updateTextAreaInput(
-      session = session,
-      inputId = 'chat_user_prompt',
-      value = user_prompt
-    )
+    tryCatch({
+      load(input$upload_prompts$datapath, envir = prompts_data)
+      
+      new_promts <- get(ls(prompts_data)[1], envir = prompts_data)
+      
+      nms <- names(new_promts)
+      if (!(('system' %in% nms) & ('user' %in% nms))) {
+        showNotification(
+          "Файл не содержит необходимые ключи: 'system' и 'user'.",
+          type = 'error'
+        )
+        return()
+      }
+      
+      updateTextAreaInput(
+        session = session,
+        inputId = 'chat_system_prompt',
+        value = new_promts[['system']]
+      )
+      updateTextAreaInput(
+        session = session,
+        inputId = 'chat_user_prompt',
+        value = new_promts[['user']]
+      )
+    }, error = function(e) {
+      showNotification(
+        'Ошибка при загрузке файла: ' + e$message,
+        type = 'error'
+      )
+    })
   })
   
   ## Анализ ----
