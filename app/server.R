@@ -328,9 +328,8 @@ server <- function(input, output, session) {
       scaleset(),
       input$method,
       input$similarity_group_items,
-      hypotheses()
-      # backend(),
-      # prompts()
+      hypotheses(),
+      prompts()
     ) |>
     bindEvent(input$submit)
     
