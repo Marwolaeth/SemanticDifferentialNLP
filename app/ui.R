@@ -200,6 +200,7 @@ ui <- dashboardPage(
             'Классификация',
             value = 'edit-classification',
             tags$br(),
+            ###### Шаблон гипотезы ----
             textInput(
               'hypothesis_template',
               'Шаблон гипотезы',
@@ -218,11 +219,14 @@ ui <- dashboardPage(
           tabPanel(
             'Семантическая близость',
             value = 'edit-similarity',
+            
+            ###### Группировать характеристики ----
             checkboxInput(
               'similarity_group_items',
               label = 'Объединять элементы шкалы в одну фразу',
               value = FALSE
             ) |> with_helper('group-items'),
+            ###### Агрегация ----
             radioButtons(
               'similarity_aggregation',
               label = 'Метод агрегирования',
@@ -233,6 +237,7 @@ ui <- dashboardPage(
                 'Токен объекта'       = 'token'
               )
             ) |> with_helper('aggregation'),
+            ###### Метрика ----
             radioButtons(
               'similarity_metric',
               label = 'Метрика расстояния',
@@ -248,6 +253,7 @@ ui <- dashboardPage(
             'Чат-модели',
             value = 'edit-chat',
             
+            ###### Редактирование промптов ----
             fluidRow(
               column(
                 6,
@@ -266,6 +272,7 @@ ui <- dashboardPage(
                   rows = 6,
                   width = '100%'
                 ),
+                ###### Кнопки ----
                 actionButton(
                   'generate_prompts',
                   'Применить изменения',
@@ -290,6 +297,7 @@ ui <- dashboardPage(
                 )
               ),
               
+              ###### Предпросмотр ----
               column(
                 6,
                 h4('Предпросмотр инструкций'),
@@ -299,6 +307,8 @@ ui <- dashboardPage(
                 verbatimTextOutput('user_prompt_preview', placeholder = TRUE)
               )
             ),
+            
+            ###### Экспорт и импорт ----
             fluidRow(
               column(
                 6,
