@@ -59,6 +59,8 @@ server <- function(input, output, session) {
     }
   })
   
+  model_name <- reactive(names(models()[as.numeric(input$model)]))
+  
   output$model <- renderUI({
     current_model <- isolate(input$model)
     selectInput(
@@ -103,11 +105,10 @@ server <- function(input, output, session) {
   prefix <- reactive({
     req(models)
     req(input$model)
-    model_name <- names(models()[as.numeric(input$model)])
     
     # Добавим префиксы, если модель их принимает
     stringr::str_detect(
-      model_name,
+      model_name(),
       '([Ss]enten)|([Ss][Bb][Ee][Rr][Tt])|(s\\-encoder)'
     )
   })
@@ -139,8 +140,7 @@ server <- function(input, output, session) {
     req(input$model)
     req(scaleset())
     
-    model_name <- names(models()[as.numeric(input$model)])
-    print(model_name)
+    print(model_name())
     
     if (input$similarity_aggregation %in% c('auto', 'token')) {
       aggregation <- ifelse(prefix(), 'cls', 'mean')
@@ -166,7 +166,7 @@ server <- function(input, output, session) {
             )
             scale_result <- .items_to_norms(
               items = semantic_scale,
-              model = model_name,
+              model = model_name(),
               as_phrases = as_phrases,
               template = hypotheses(),
               prefix = prefix(),
@@ -194,10 +194,7 @@ server <- function(input, output, session) {
   backend <- reactive({
     req(input$method == 'chat')
     
-    model_name <- names(models()[as.numeric(input$model)])
-    print(model_name)
-    
-    mall::llm_use('ollama', model_name, seed = input$seed)
+    mall::llm_use('ollama', model_name(), seed = input$seed)
   })
   
   #### Промпты ----
@@ -224,8 +221,7 @@ server <- function(input, output, session) {
     req(prefix)
     
     ### Получение модели ----
-    model_name <- names(models()[as.numeric(input$model)])
-    print(model_name)
+    print(model_name())
     
     ### Универсальное название ----
     if (stringr::str_detect(input$object, fixed(','))) {
@@ -278,7 +274,7 @@ server <- function(input, output, session) {
             )
             text_embeddings <- text_embed(
               prgrphs,
-              model = model_name,
+              model = model_name(),
               aggregation_from_tokens_to_texts = aggregation,
               select_token = universal_brand_name,
               device = tolower(input$device)
@@ -298,7 +294,7 @@ server <- function(input, output, session) {
               if (input$method == 'classification') {
                 scale_result <- semdiff_zeroshot_map(
                   text,
-                  model_name,
+                  model_name(),
                   items = semantic_scale,
                   template = hypotheses(),
                   prefix = prefix(),
@@ -326,7 +322,16 @@ server <- function(input, output, session) {
     
     res
   }) |>
-    bindCache(input$model, input$text, scaleset(), input$method, hypotheses()) |>
+    bindCache(
+      input$model,
+      input$text,
+      scaleset(),
+      input$method,
+      input$similarity_group_items,
+      hypotheses()
+      # backend(),
+      # prompts()
+    ) |>
     bindEvent(input$submit)
     
   
@@ -475,7 +480,11 @@ server <- function(input, output, session) {
     
     current_result <- current_result |>
       dplyr::bind_rows(.id = 'scale') |>
-      mutate(text = isolate(input$text), .before = 0L)
+      mutate(
+        text = isolate(input$text),
+        model = isolate(model_name()),
+        .before = 0L
+      )
     
     eval_history(
       dplyr::bind_rows(
