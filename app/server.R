@@ -7,8 +7,10 @@ server <- function(input, output, session) {
   ### Проверка ввода ----
   iv <- InputValidator$new()
   
+  ##### Объект ----
   iv$add_rule('object', sv_required(message = 'Обязательно'))
   
+  ##### Шаблон гипотезы ----
   iv$add_rule('hypothesis_template', sv_required(message = 'Обязательно'))
   iv$add_rule(
     'hypothesis_template',
@@ -26,6 +28,19 @@ server <- function(input, output, session) {
       message = 'Шаблон должен содержать строки: `{brand_name}` и `{hypothesis}`'
     )
   )
+  
+  ##### Промпты ----
+  iv$add_rule('chat_system_prompt', sv_required(message = 'Обязательно'))
+  iv$add_rule('chat_user_prompt', sv_required(message = 'Обязательно'))
+  iv$add_rule(
+    'chat_user_prompt',
+    sv_regex(
+      pattern = 'Текст\\:$',
+      fixed = FALSE,
+      message = 'Инструкция должна оканчиваться словом «Текст» и двоеточием'
+    )
+  )
+  
   iv$enable()
   
   output$hypothesis_preview <- renderText({
@@ -198,19 +213,70 @@ server <- function(input, output, session) {
   })
   
   #### Промпты ----
-  prompts <- reactive({
-    sp <- generate_prompts(
-      scaleset(),
-      system_prompt_template = default_system_prompt_template,
-      user_prompt_template = default_user_prompt_template,
-      max_items = 1L
-    )
-    
-    print(sp)
-    
-    sp
+  ##### Обновление шаблонов ----
+  prompt_templates <- reactiveValues(
+    system = default_system_prompt_template,
+    user = default_user_prompt_template
+  )
+  
+  observeEvent(input$generate_prompts, {
+    prompt_templates[['system']] <- input$chat_system_prompt
+    prompt_templates[['user']] <- input$chat_user_prompt
   })
   
+  ##### Генерация ----
+  prompts <- reactive({
+    generate_prompts(
+      scaleset(),
+      system_prompt_template = prompt_templates[['system']],
+      user_prompt_template = prompt_templates[['user']],
+      max_items = 1L
+    )
+  })
+  
+  ##### Предпросмотр ----
+  output$system_prompt_preview <- renderPrint({
+    stringr::str_wrap(prompts()[[1]][['content']], width = 80) |> cat()
+  })
+  
+  output$user_prompt_preview <- renderPrint({
+    stringr::str_wrap(prompts()[[2]][['content']], width = 80) |> cat()
+  })
+  
+  ##### Копирование полной версии ----
+  observeEvent(input$chat_copy_preview, {
+    system_prompt <- prompts()[[1]][['content']] |>
+      stringr::str_replace_all(fixed('{'), fixed('{{')) |>
+      stringr::str_replace_all(fixed('}'), fixed('}}'))
+    user_prompt <- prompts()[[2]][['content']] |>
+      stringr::str_replace_all(fixed('{'), fixed('{{')) |>
+      stringr::str_replace_all(fixed('}'), fixed('}}'))
+    
+    updateTextAreaInput(
+      session = session,
+      inputId = 'chat_system_prompt',
+      value = system_prompt
+    )
+    updateTextAreaInput(
+      session = session,
+      inputId = 'chat_user_prompt',
+      value = user_prompt
+    )
+  })
+  
+  ##### Возврат ----
+  observeEvent(input$chat_default_promts, {
+    updateTextAreaInput(
+      session = session,
+      inputId = 'chat_system_prompt',
+      value = default_system_prompt_template
+    )
+    updateTextAreaInput(
+      session = session,
+      inputId = 'chat_user_prompt',
+      value = default_user_prompt_template
+    )
+  })
   
   ## Анализ ----
   result <- reactive({

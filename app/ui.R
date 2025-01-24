@@ -205,7 +205,7 @@ ui <- dashboardPage(
               'Шаблон гипотезы',
               value = '{brand_name} – {hypothesis}'
             ) |> with_helper('hypothesis-template'),
-            h4('Предпросмотр: '),
+            h5('Предпросмотр: '),
             tags$div(
               textOutput(
                 'hypothesis_preview',
@@ -246,7 +246,59 @@ ui <- dashboardPage(
           ##### Chat ----
           tabPanel(
             'Чат-модели',
-            value = 'edit-chat'
+            value = 'edit-chat',
+            
+            fluidRow(
+              column(
+                6,
+                h4('Редактирование инструкций'),
+                textAreaInput(
+                  inputId = 'chat_system_prompt',
+                  label = 'Системная инструкция',
+                  value = default_system_prompt_template,
+                  rows = 12,
+                  width = '100%'
+                ),
+                textAreaInput(
+                  inputId = 'chat_user_prompt',
+                  label = 'Пользовательская инструкция',
+                  value = default_user_prompt_template,
+                  rows = 6,
+                  width = '100%'
+                ),
+                actionButton(
+                  'generate_prompts',
+                  'Применить изменения',
+                  icon = icon('bolt'),
+                  width = '100%',
+                  style = 'margin-top:6px;'
+                ),
+                actionButton(
+                  'chat_copy_preview',
+                  'Копировать из предпросмотра',
+                  icon = icon('angles-left'),
+                  width = '100%',
+                  style = 'margin-top:6px;'
+                ),
+                actionButton(
+                  'chat_default_promts',
+                  'Вернуть по умолчанию',
+                  icon = icon('arrow-rotate-left'),
+                  class = 'btn-warning',
+                  width = '100%',
+                  style = 'margin-top:6px;'
+                )
+              ),
+              
+              column(
+                6,
+                h4('Предпросмотр инструкций'),
+                h5('Системная инструкция:'),
+                verbatimTextOutput('system_prompt_preview', placeholder = TRUE),
+                h5('Пользовательская инструкция:'),
+                verbatimTextOutput('user_prompt_preview', placeholder = TRUE)
+              )
+            )
           )
         )
       ),

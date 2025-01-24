@@ -59,7 +59,11 @@ default_system_prompt_template <- paste0(
   'You are very rigorous. Please double-check your response format and all ',
   'the braces: it must be a valid JSON.'
 )
-
+default_system_prompt_template <- stringr::str_replace(
+  default_system_prompt_template,
+  fixed('{universal_brand_name}'),
+  fixed(universal_brand_name)
+)
 
 ### User ----
 default_user_prompt_template <- paste(
