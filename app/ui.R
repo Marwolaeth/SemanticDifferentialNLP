@@ -298,6 +298,27 @@ ui <- dashboardPage(
                 h5('Пользовательская инструкция:'),
                 verbatimTextOutput('user_prompt_preview', placeholder = TRUE)
               )
+            ),
+            fluidRow(
+              column(
+                6,
+                downloadButton(
+                  'download_prompts',
+                  'Экспортировать инструкции',
+                  class = 'btn-success',
+                  style = 'margin-top:25px;'
+                )
+              ),
+              column(
+                6,
+                fileInput(
+                  'upload_prompts',
+                  'Импортировать инструкции',
+                  accept = c('.RData'),
+                  buttonLabel = 'Обзор…',
+                  placeholder = 'Файл не выбран'
+                )
+              )
             )
           )
         )

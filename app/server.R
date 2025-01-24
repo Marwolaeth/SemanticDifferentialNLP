@@ -278,6 +278,42 @@ server <- function(input, output, session) {
     )
   })
   
+  ##### Экспорт и импорт ----
+  output$download_prompts <- downloadHandler(
+    filename = function() {
+      paste('prompts-', Sys.Date(), '.RData', sep = '')
+    },
+    content = function(file) {
+      prompts <- list(
+        system = input$chat_system_prompt,
+        user   = input$chat_user_prompt
+      )
+      save(prompts, file = file)
+    }
+  )
+  observeEvent(input$upload_prompts, {
+    req(input$upload_prompts)
+    
+    prompts_data <- new.env()
+    load(input$upload_prompts$datapath, envir = prompts_data)
+    
+    new_promts <- get(ls(prompts_data)[1], envir = prompts_data)
+    
+    system_prompt <- new_promts[['system']]
+    user_prompt   <- new_promts[['user']]
+    
+    updateTextAreaInput(
+      session = session,
+      inputId = 'chat_system_prompt',
+      value = system_prompt
+    )
+    updateTextAreaInput(
+      session = session,
+      inputId = 'chat_user_prompt',
+      value = user_prompt
+    )
+  })
+  
   ## Анализ ----
   result <- reactive({
     req(input$object)
