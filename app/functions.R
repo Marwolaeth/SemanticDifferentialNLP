@@ -666,68 +666,127 @@ generate_prompts <- function(
   scale_names <- and(tolower(names(scaleset)))
   
   ## System ----
-  scaleset_description <- purrr::map2(
-    scaleset,
-    names(scaleset),
-    function(scale, name) {
-      markers <- map(scale, names)
-      items_neg <- map_chr(markers, 1)
-      items_pos <- map_chr(markers, 3)
-      if (is.null(max_items)) max_items <- length(items_neg)
-      if (max_items == 1L) {
-        items_neg <- items_neg[1]
-        items_pos <- items_pos[1]
-      }
-      if (length(items_neg) > 1) {
-        # Негативны маркеры — дизъюнкция
-        items_neg <- items_neg[1:max_items] |> or() |> str_parenthesise()
-      }
-      if (length(items_pos) > 1) {
-        # Позитивные маркеры — конъюнкция
-        items_pos <- items_pos[1:max_items] |> and() |> str_parenthesise()
-      }
-      glue::glue('"{name}": ', paste(items_pos, items_neg, sep = ' vs. '))
-    }
-  ) |>
-    paste(collapse = ', ')
+  ### Если плейсхолдера нет, то не надо ничего обрабатывать
+  scaleset_description_required <- any(
+    stringr::str_detect(
+      c(system_prompt_template, user_prompt_template),
+      fixed('{scaleset_description}')
+    )
+  )
+  cat('scaleset_description_required:', scaleset_description_required)
   
-  scaleset_example <- purrr::map2(
-    scaleset,
-    names(scaleset),
-    function(scale, name) {
-      markers <- map(scale, names)
-      rating <- sample(
-        c(-5L, -4L, 0L, 4L, 5L),
-        size = 1,
-        prob = c(1, 1, 2, 1, 1)
-      )
-      items_neg <- map_chr(markers, 1)
-      items_pos <- map_chr(markers, 3)
-      if (rating  == 0) {
-        comment <- 'The text provides no relevant info'
-      } else {
-        quantifier <- ifelse(abs(rating) == 5, 'очень', 'достаточно')
-        if (rating < 0) {
-          marker <- sample(items_neg, size = 1)
-        } else {
-          marker <- sample(items_pos, size = 1)
+  ### Если есть, построим описание набора шкал
+  if (scaleset_description_required) {
+    scaleset_description <- purrr::map2(
+      scaleset,
+      names(scaleset),
+      function(scale, name) {
+        markers <- map(scale, names)
+        items_neg <- map_chr(markers, 1)
+        items_pos <- map_chr(markers, 3)
+        if (is.null(max_items)) max_items <- length(items_neg)
+        if (max_items == 1L) {
+          items_neg <- items_neg[1]
+          items_pos <- items_pos[1]
         }
-        comment <- glue::glue(
-          'Из текста можно сделать вывод, что бренд {quantifier} {marker}'
+        if (length(items_neg) > 1) {
+          # Негативны маркеры — дизъюнкция
+          items_neg <- items_neg[1:max_items] |> or() |> str_parenthesise()
+        }
+        if (length(items_pos) > 1) {
+          # Позитивные маркеры — конъюнкция
+          items_pos <- items_pos[1:max_items] |> and() |> str_parenthesise()
+        }
+        glue::glue('"{name}": ', paste(items_pos, items_neg, sep = ' vs. '))
+      }
+    ) |>
+      paste(collapse = ', ')
+  }
+  
+  ### Если автоматический пример ответа не требуется, то не надо его составлять
+  scaleset_example_required <- any(
+    stringr::str_detect(
+      c(system_prompt_template, user_prompt_template),
+      fixed('{scaleset_example}')
+    )
+  )
+  cat('scaleset_example_required:', scaleset_example_required)
+  
+  ### Если требуется, то надо составить
+  if (scaleset_example_required) {
+    scaleset_example <- purrr::map2(
+      scaleset,
+      names(scaleset),
+      function(scale, name) {
+        markers <- map(scale, names)
+        rating <- sample(
+          c(-5L, -4L, 0L, 4L, 5L),
+          size = 1,
+          prob = c(1, 1, 2, 1, 1)
+        )
+        items_neg <- map_chr(markers, 1)
+        items_pos <- map_chr(markers, 3)
+        if (rating  == 0) {
+          comment <- 'The text provides no relevant info'
+        } else {
+          quantifier <- ifelse(abs(rating) == 5, 'очень', 'достаточно')
+          if (rating < 0) {
+            marker <- sample(items_neg, size = 1)
+          } else {
+            marker <- sample(items_pos, size = 1)
+          }
+          comment <- glue::glue(
+            'Из текста можно сделать вывод, что бренд {quantifier} {marker}'
+          )
+        }
+        glue::glue(
+          '"{name}": {{"rating":{rating},"comment":"{comment}"}}'
         )
       }
-      glue::glue(
-        '"{name}": {{"rating":{rating},"comment":"{comment}"}}'
+    ) |>
+      paste(collapse = ',') |>
+      str_enclose('{')
+  ### Если нет автоматического примера ответа, то, возможно, формат не прописан
+  } else {
+    #### Проверим, прописан ли формат
+    format_example_provided <- stringr::str_detect(
+      system_prompt_template,
+      '\\"rating\\"\\:'
+    ) & stringr::str_detect(
+      system_prompt_template,
+      '\\"comment\\"\\:'
+    )
+    cat('format_example_provided:', format_example_provided)
+    #### Если не прописан, добавим
+    if (!format_example_provided) {
+      frmt <- '{"Scale name 1": {"rating":-2, "comment":"Your comment here"}}'
+      
+      ##### Если придется применять `glue`, то нужно избежать одиноких
+      ###### фигурных скобок
+      if (scaleset_description_required) frmt <- str_enclose(frmt, '{')
+      format_hint <- paste(
+        'Please for each scale return adistionary containing two entries:',
+        '"raiting" and "comment", like this:',
+        frmt
+      )
+      ##### Добавим описание формата в конец инструкции
+      system_prompt_template <- paste(
+        system_prompt_template,
+        format_hint,
+        sep = '\n'
       )
     }
-  ) |>
-    paste(collapse = ',') |>
-    str_enclose('{')
+  }
+  
+  ### Если есть хотя бы один плейсхолдер, используем `glue`
+  if (scaleset_example_required | scaleset_description_required) {
+    system_prompt_template <- glue::glue(system_prompt_template)
+  }
   
   ## Сборка ----
   system_prompt <- ollamar::create_message(
     role = 'system',
-    content = glue::glue(system_prompt_template)
+    content = system_prompt_template
   )
   
   user_prompt <- ollamar::create_message(
