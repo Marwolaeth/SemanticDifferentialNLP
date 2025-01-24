@@ -92,10 +92,10 @@ text_embed_raw <- function(
     texts,
     model,
     device = 'cpu',
-    tokenizer_parallelism = TRUE,
+    tokenizer_parallelism = FALSE,
     trust_remote_code = TRUE,
     logging_level = 'error',
-    max_token_to_sentence = 5
+    max_token_to_sentence = 50
 ) {
   layers <- get_number_of_hidden_layers(
     model,
