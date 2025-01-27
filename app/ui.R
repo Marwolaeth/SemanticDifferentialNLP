@@ -255,14 +255,21 @@ ui <- dashboardPage(
             value = 'edit-chat',
             
             ##### Температура ----
-            sliderInput(
-              'chat_temperature',
-              'Температура',
-              min = 0,
-              max = 2,
-              value = 0,
-              step = .1
-            ) |> with_helper('temperature'),
+            fluidRow(
+              column(
+                6,
+                h4('Температура') |> with_helper('temperature'),
+                sliderInput(
+                  'chat_temperature',
+                  '',
+                  min = 0,
+                  max = 2,
+                  value = 0,
+                  step = .1
+                )
+              ),
+              column(6)
+            ),
             
             ##### Редактирование промптов ----
             fluidRow(
