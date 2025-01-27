@@ -1,4 +1,4 @@
-## SERVER ----
+# SERVER ----
 server <- function(input, output, session) {
   observe_helpers(withMathJax = TRUE)
   
@@ -7,10 +7,10 @@ server <- function(input, output, session) {
   ### Проверка ввода ----
   iv <- InputValidator$new()
   
-  ##### Объект ----
+  ### Объект ----
   iv$add_rule('object', sv_required(message = 'Обязательно'))
   
-  ##### Шаблон гипотезы ----
+  ### Шаблон гипотезы ----
   iv$add_rule('hypothesis_template', sv_required(message = 'Обязательно'))
   iv$add_rule(
     'hypothesis_template',
@@ -29,7 +29,7 @@ server <- function(input, output, session) {
     )
   )
   
-  ##### Промпты ----
+  ### Промпты ----
   iv$add_rule('chat_system_prompt', sv_required(message = 'Обязательно'))
   iv$add_rule('chat_user_prompt', sv_required(message = 'Обязательно'))
   iv$add_rule(

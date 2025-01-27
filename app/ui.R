@@ -3,14 +3,14 @@ library(flexdashboard)
 library(shinydashboard)
 library(shinydashboardPlus)
 
-## UI ----
+# UI ----
 ui <- dashboardPage(
   title = 'Brand Semantics',
   skin = 'red',
   
   header = dashboardHeader(title = 'Brand Semantics', titleWidth = '25%'),
   
-  ### Боковая панель ----
+  ## Боковая панель ----
   sidebar = dashboardSidebar(
     width = '30%',
     sidebarMenu(
@@ -25,7 +25,7 @@ ui <- dashboardPage(
     )
   ),
   
-  ### Панель настроек ----
+  ## Панель настроек ----
   controlbar = dashboardControlbar(
     width = 450,
     tags$div(
@@ -57,15 +57,15 @@ ui <- dashboardPage(
     )
   ),
   
-  ### Основная панель ----
+  ## Основная панель ----
   body = dashboardBody(
     useShinyjs(),
     
     tabItems(
-      #### Интерфейс оценки ----
+      ### Интерфейс оценки ----
       tabItem(
         tabName = 'assessment',
-        ##### Ввод ----
+        #### Ввод ----
         fluidRow(
           column(
             12,
@@ -107,7 +107,7 @@ ui <- dashboardPage(
             )
           )
         ),
-        ##### Вывод ----
+        #### Вывод ----
         fluidRow(
           style = 'padding:10px;',
           tabsetPanel(
@@ -129,17 +129,17 @@ ui <- dashboardPage(
           )
         )
       ),
-      #### Настройка шкал ----
+      ### Настройка шкал ----
       tabItem(
         tabName = 'settings',
         h2('Редактирование семантических шкал'),
-        ##### Редактирование ----
+        #### Редактирование ----
         tabsetPanel(
           tabPanel(
             'Редактирование',
             value = 'edit-scales',
             uiOutput('scale_inputs'),
-            ##### Добавить и Сохранить ----
+            #### Добавить и Сохранить ----
             fluidRow(
               column(
                 6,
@@ -160,7 +160,7 @@ ui <- dashboardPage(
               )
             )
           ),
-          ##### Предпросмотр ----
+          #### Предпросмотр ----
           tabPanel(
             'Предпросмотр',
             value = 'edit-scales-preview',
@@ -168,7 +168,7 @@ ui <- dashboardPage(
           )
         ),
         tags$br(),
-        ##### Экспорт и импорт ----
+        #### Экспорт и импорт ----
         fluidRow(
           column(
             6,
@@ -191,17 +191,17 @@ ui <- dashboardPage(
           )
         )
       ),
-      #### Настройка оценщиков ----
+      ### Настройка оценщиков ----
       tabItem(
         tabName = 'method-settings',
         h2('Настройка оценщиков'),
-        ##### NLI ----
+        #### NLI ----
         tabsetPanel(
           tabPanel(
             'Классификация',
             value = 'edit-classification',
             tags$br(),
-            ###### Шаблон гипотезы ----
+            ##### Шаблон гипотезы ----
             textInput(
               'hypothesis_template',
               'Шаблон гипотезы',
@@ -216,18 +216,18 @@ ui <- dashboardPage(
               style = 'color:#888;'
             )
           ),
-          ##### Similarity ----
+          #### Similarity ----
           tabPanel(
             'Семантическая близость',
             value = 'edit-similarity',
             
-            ###### Группировать характеристики ----
+            ##### Группировать характеристики ----
             checkboxInput(
               'similarity_group_items',
               label = 'Объединять элементы шкалы в одну фразу',
               value = FALSE
             ) |> with_helper('group-items'),
-            ###### Агрегация ----
+            ##### Агрегация ----
             radioButtons(
               'similarity_aggregation',
               label = 'Метод агрегирования',
@@ -238,7 +238,7 @@ ui <- dashboardPage(
                 'Токен объекта'       = 'token'
               )
             ) |> with_helper('aggregation'),
-            ###### Метрика ----
+            ##### Метрика ----
             radioButtons(
               'similarity_metric',
               label = 'Метрика расстояния',
@@ -249,12 +249,12 @@ ui <- dashboardPage(
               width = '80%'
             ) |> with_helper('metrics')
           ),
-          ##### Chat ----
+          #### Chat ----
           tabPanel(
             'Чат-модели',
             value = 'edit-chat',
             
-            ###### Редактирование промптов ----
+            ##### Редактирование промптов ----
             fluidRow(
               column(
                 6,
@@ -273,7 +273,7 @@ ui <- dashboardPage(
                   rows = 6,
                   width = '100%'
                 ),
-                ###### Кнопки ----
+                ##### Кнопки ----
                 actionButton(
                   'generate_prompts',
                   'Применить изменения',
@@ -298,7 +298,7 @@ ui <- dashboardPage(
                 )
               ),
               
-              ###### Предпросмотр ----
+              ##### Предпросмотр ----
               column(
                 6,
                 h4('Предпросмотр инструкций'),
@@ -310,7 +310,7 @@ ui <- dashboardPage(
             ),
             
             tags$br(),
-            ###### Экспорт и импорт ----
+            ##### Экспорт и импорт ----
             fluidRow(
               column(
                 6,
@@ -335,7 +335,7 @@ ui <- dashboardPage(
           )
         )
       ),
-      #### История оценок ----
+      ### История оценок ----
       tabItem(
         tabName = 'history',
         h2('История оценок'),
