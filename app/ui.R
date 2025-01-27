@@ -262,7 +262,7 @@ ui <- dashboardPage(
               max = 2,
               value = 0,
               step = .1
-            ),
+            ) |> with_helper('temperature'),
             
             ##### Редактирование промптов ----
             fluidRow(
