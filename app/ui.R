@@ -146,7 +146,8 @@ ui <- dashboardPage(
                 actionButton(
                   'add_scale',
                   'Добавить шкалу',
-                  class = 'btn-primary'
+                  class = 'btn-primary btn-lg',
+                  icon = icon('plus')
                 )
               ),
               column(
@@ -155,7 +156,8 @@ ui <- dashboardPage(
                 actionButton(
                   'submit_scales',
                   'Сохранить',
-                  class = 'btn-success'
+                  class = 'btn-success btn-lg',
+                  icon = icon('save')
                 )
               )
             )

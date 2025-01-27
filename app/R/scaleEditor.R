@@ -35,7 +35,11 @@ scaleEditorUI <- function(id) {
       fluidRow(
         column(
           6,
-          actionButton(ns('add_item'), 'Добавить характеристики')
+          actionButton(
+            ns('add_item'),
+            'Добавить характеристики',
+            icon = icon('plus')
+          )
         ),
         column(
           6,
