@@ -209,7 +209,12 @@ server <- function(input, output, session) {
   backend <- reactive({
     req(input$method == 'chat')
     
-    mall::llm_use('ollama', model_name(), seed = input$seed)
+    mall::llm_use(
+      'ollama',
+      model_name(),
+      seed = input$seed,
+      temperature = input$chat_temperature
+    )
   })
   
   #### Промпты ----

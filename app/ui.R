@@ -254,6 +254,16 @@ ui <- dashboardPage(
             'Чат-модели',
             value = 'edit-chat',
             
+            ##### Температура ----
+            sliderInput(
+              'chat_temperature',
+              'Температура',
+              min = 0,
+              max = 2,
+              value = 0,
+              step = .1
+            ),
+            
             ##### Редактирование промптов ----
             fluidRow(
               column(
