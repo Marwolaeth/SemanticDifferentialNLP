@@ -2,6 +2,9 @@ devtools::install_github('edubruell/tidyllm', build = TRUE)
 library(tidyllm)
 library(tictoc)
 
+## Example Scalset ----
+load('data/scalesets/scaleset-4-uniqueness3.sds')
+
 ## Example Texts ----
 sents <- c(
   'Инженеры Xcellent работают над созданием микропроцессоров, которые могут изменить представление о вычислительных мощностях.',
@@ -88,5 +91,7 @@ res |> get_reply_data() |> str()
 res |>
   get_reply_data() |>
   tibble::as_tibble() |>
+  dplyr::rename(.score = rating) |>
   dplyr::group_by(scale) |>
-  dplyr::group_split(.keep = F)
+  dplyr::group_split(.keep = F) |>
+  purrr::set_names(names(scaleset))
